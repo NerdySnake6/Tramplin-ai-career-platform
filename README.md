@@ -205,11 +205,41 @@ TRAMPLIN_ADMIN_EMAIL=admin@example.com
 TRAMPLIN_ADMIN_PASSWORD=надежный_пароль
 TRAMPLIN_ADMIN_NAME=Администратор
 TRAMPLIN_AUTO_VERIFY_EMPLOYERS=false
+SMTP_HOST=smtp.yandex.com
+SMTP_PORT=587
+SMTP_USERNAME=noreply@tramplin.site
+SMTP_PASSWORD=пароль_приложения_яндекс_почты
+SMTP_FROM_EMAIL=noreply@tramplin.site
+SMTP_FROM_NAME=Трамплин
+BACKEND_PUBLIC_URL=https://tramplin.site/api
+FRONTEND_PUBLIC_URL=https://tramplin.site
+EMAIL_VERIFICATION_TTL_MINUTES=60
 FRONTEND_PORT=80
 FRONTEND_HTTPS_PORT=443
 ```
 
-### 2. Запустить проект
+### 2. Подключить почту `noreply@tramplin.site`
+
+Email-подтверждение использует SMTP и отправляет письма от имени `noreply@tramplin.site`.
+Секреты почты хранятся только в `.env` на VPS.
+
+1. Создай организацию в Yandex 360 и подключи домен `tramplin.site`.
+2. В DNS домена добавь записи, которые покажет Yandex 360. Для почты обычно нужны:
+
+```text
+MX   @                mx.yandex.net
+TXT  @                v=spf1 redirect=_spf.yandex.net
+TXT  mail._domainkey  DKIM-ключ из Yandex 360
+TXT  _dmarc           v=DMARC1; p=none; rua=mailto:noreply@tramplin.site
+```
+
+3. После подтверждения домена создай ящик `noreply@tramplin.site`.
+4. В настройках Yandex ID для этого ящика создай пароль приложения типа `Почта`.
+5. Вставь пароль приложения в `SMTP_PASSWORD` в `.env` на VPS.
+
+Если письма не отправляются, проверь `docker compose logs -f backend`, правильность `SMTP_PASSWORD` и статус DNS-записей в Yandex 360.
+
+### 3. Запустить проект
 
 ```bash
 docker compose up -d --build
@@ -221,7 +251,7 @@ docker compose up -d --build
 - backend будет доступен внутри Docker-сети как `backend:8000`
 - Swagger и OpenAPI в production закрыты nginx-конфигом
 
-### 3. Проверить состояние контейнеров
+### 4. Проверить состояние контейнеров
 
 ```bash
 docker compose ps
