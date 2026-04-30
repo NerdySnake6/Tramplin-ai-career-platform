@@ -162,6 +162,7 @@ def seed_default_admin():
             role="admin",
             is_active=True,
             is_verified=True,
+            is_email_verified=True,
         )
         db.add(admin_user)
         try:

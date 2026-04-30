@@ -41,6 +41,10 @@ class User(Base):
     # Статусы
     is_active: Mapped[bool] = mapped_column(default=True)
     is_verified: Mapped[bool] = mapped_column(default=True)  # для работодателей
+    is_email_verified: Mapped[bool] = mapped_column(default=True)
+    email_verification_token_hash: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    email_verification_sent_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    email_verified_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     
     # Метаданные
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now_naive)

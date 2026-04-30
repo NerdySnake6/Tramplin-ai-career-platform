@@ -15,7 +15,7 @@ from app import database, models
 
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
-INITIAL_REVISION = "a7a8aa0eae8f"
+HEAD_REVISION = "b7c4e2d1a9f0"
 
 
 def build_alembic_config(db_url: str) -> Config:
@@ -99,7 +99,7 @@ def test_alembic_upgrade_head_creates_schema_and_bootstrap_data(tmp_path, monkey
         current_revision = connection.execute(
             text("SELECT version_num FROM alembic_version")
         ).scalar_one()
-    assert current_revision == INITIAL_REVISION
+    assert current_revision == HEAD_REVISION
 
     session = database.SessionLocal()
     try:
@@ -130,6 +130,40 @@ def test_init_db_seeds_admin_only_from_explicit_environment(tmp_path, monkeypatc
     finally:
         session.close()
         engine.dispose()
+
+
+def test_email_verification_migration_keeps_existing_users_enabled(tmp_path, monkeypatch):
+    """Проверяет, что миграция не блокирует уже созданные аккаунты."""
+    engine, db_url = configure_test_database(tmp_path, monkeypatch)
+    alembic_config = build_alembic_config(db_url)
+
+    command.upgrade(alembic_config, "a7a8aa0eae8f")
+    with engine.begin() as connection:
+        connection.execute(
+            text(
+                """
+                INSERT INTO users (
+                    email, hashed_password, display_name, role,
+                    is_active, is_verified, created_at
+                )
+                VALUES (
+                    'existing@example.com', 'hash', 'Existing User', 'applicant',
+                    1, 1, '2026-04-30 00:00:00'
+                )
+                """
+            )
+        )
+
+    command.upgrade(alembic_config, "head")
+
+    with engine.connect() as connection:
+        row = connection.execute(
+            text("SELECT is_email_verified FROM users WHERE email = 'existing@example.com'")
+        ).first()
+    assert row is not None
+    assert row[0] is True or row[0] == 1
+
+    engine.dispose()
 
 
 def test_init_db_rejects_outdated_alembic_revision(tmp_path, monkeypatch):

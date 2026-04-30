@@ -4,6 +4,8 @@ from datetime import UTC, datetime, timedelta
 
 from app import models
 from app.auth import create_access_token
+from app.email_service import EmailDeliveryError
+from app.routers import auth as auth_router
 from app.routers.opportunities import EMPLOYER_FREE_OPPORTUNITY_LIMIT
 
 
@@ -27,6 +29,7 @@ def register_user(client, *, email, password, display_name, role):
 
 def login_user(client, *, email, password):
     """Выполняет вход и возвращает access token."""
+    confirm_registered_email(client, email)
     response = client.post(
         "/auth/login",
         data={"username": email, "password": password},
@@ -34,6 +37,16 @@ def login_user(client, *, email, password):
     )
     assert response.status_code == 200
     return response.json()["access_token"]
+
+
+def confirm_registered_email(client, email):
+    """Подтверждает email через token, перехваченный тестовым SMTP mock."""
+    token = getattr(client.app.state, "email_verification_tokens", {}).pop(email, None)
+    if not token:
+        return
+
+    response = client.get(f"/auth/verify-email?token={token}", follow_redirects=False)
+    assert response.status_code == 303
 
 
 def auth_headers(token):
@@ -85,6 +98,113 @@ def test_employer_auto_verification_can_be_enabled_for_demo(client, monkeypatch)
 
     assert response.status_code == 201
     assert response.json()["is_verified"] is True
+
+
+def test_registration_requires_email_confirmation_before_login(client):
+    """Проверяет, что вход блокируется до подтверждения email."""
+    response = register_user(
+        client,
+        email="needs-email-confirmation@example.com",
+        password="supersecret",
+        display_name="Needs Email",
+        role="applicant",
+    )
+    assert response.status_code == 201
+    assert response.json()["is_email_verified"] is False
+    assert client.app.state.email_verification_tokens["needs-email-confirmation@example.com"]
+
+    blocked_login = client.post(
+        "/auth/login",
+        data={"username": "needs-email-confirmation@example.com", "password": "supersecret"},
+        headers={"Content-Type": "application/x-www-form-urlencoded"},
+    )
+    assert blocked_login.status_code == 403
+
+    confirm_registered_email(client, "needs-email-confirmation@example.com")
+
+    token = login_user(
+        client,
+        email="needs-email-confirmation@example.com",
+        password="supersecret",
+    )
+    assert token
+
+
+def test_registration_rolls_back_when_email_delivery_fails(client, db_session, monkeypatch):
+    """Проверяет, что пользователь не остается в базе при ошибке SMTP."""
+    def fail_delivery(**_):
+        raise EmailDeliveryError("smtp down")
+
+    monkeypatch.setattr(auth_router, "send_verification_email", fail_delivery)
+
+    response = register_user(
+        client,
+        email="smtp-failure@example.com",
+        password="supersecret",
+        display_name="SMTP Failure",
+        role="applicant",
+    )
+
+    assert response.status_code == 503
+    assert (
+        db_session.query(models.User)
+        .filter(models.User.email == "smtp-failure@example.com")
+        .first()
+        is None
+    )
+
+
+def test_resend_verification_generates_new_token(client):
+    """Проверяет повторную отправку письма подтверждения."""
+    register_response = register_user(
+        client,
+        email="resend-verification@example.com",
+        password="supersecret",
+        display_name="Resend Verification",
+        role="applicant",
+    )
+    assert register_response.status_code == 201
+    first_token = client.app.state.email_verification_tokens["resend-verification@example.com"]
+
+    resend_response = client.post(
+        "/auth/resend-verification",
+        json={"email": "resend-verification@example.com"},
+    )
+
+    assert resend_response.status_code == 200
+    second_token = client.app.state.email_verification_tokens["resend-verification@example.com"]
+    assert second_token
+    assert second_token != first_token
+
+
+def test_invalid_and_expired_verification_tokens_are_rejected(client, db_session, monkeypatch):
+    """Проверяет, что неверный и просроченный tokens не подтверждают email."""
+    register_response = register_user(
+        client,
+        email="expired-verification@example.com",
+        password="supersecret",
+        display_name="Expired Verification",
+        role="applicant",
+    )
+    assert register_response.status_code == 201
+    token = client.app.state.email_verification_tokens["expired-verification@example.com"]
+
+    invalid_response = client.get("/auth/verify-email?token=wrong-token", follow_redirects=False)
+    assert invalid_response.status_code == 400
+
+    user = (
+        db_session.query(models.User)
+        .filter(models.User.email == "expired-verification@example.com")
+        .first()
+    )
+    user.email_verification_sent_at = utc_now_naive() - timedelta(minutes=2)
+    db_session.commit()
+    monkeypatch.setenv("EMAIL_VERIFICATION_TTL_MINUTES", "1")
+
+    expired_response = client.get(f"/auth/verify-email?token={token}", follow_redirects=False)
+    assert expired_response.status_code == 400
+    db_session.refresh(user)
+    assert user.is_email_verified is False
 
 
 def test_unverified_employer_can_create_only_free_limit_before_verification(client, db_session):

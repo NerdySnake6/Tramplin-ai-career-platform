@@ -3,6 +3,7 @@
 from argparse import Namespace
 from pathlib import Path
 import sys
+from urllib.parse import parse_qs, urlparse
 
 import pytest
 from alembic import command
@@ -19,6 +20,7 @@ from fastapi.testclient import TestClient
 
 from app import auth, database
 from app.main import app
+from app.routers import auth as auth_router
 
 
 def build_alembic_config(db_url: str) -> Config:
@@ -48,6 +50,14 @@ def client(tmp_path, monkeypatch):
     monkeypatch.delenv("TRAMPLIN_ADMIN_PASSWORD", raising=False)
     monkeypatch.delenv("TRAMPLIN_ADMIN_NAME", raising=False)
     monkeypatch.delenv("TRAMPLIN_AUTO_VERIFY_EMPLOYERS", raising=False)
+
+    app.state.email_verification_tokens = {}
+
+    def fake_send_verification_email(*, to_email, verification_url, **_):
+        token = parse_qs(urlparse(verification_url).query)["token"][0]
+        app.state.email_verification_tokens[to_email] = token
+
+    monkeypatch.setattr(auth_router, "send_verification_email", fake_send_verification_email)
 
     command.upgrade(build_alembic_config(db_url), "head")
 
