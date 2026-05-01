@@ -68,13 +68,20 @@ export function renderAlert(container, kind, text) {
     container.appendChild(createEl('div', `alert alert-${kind} mb-0`, text));
 }
 
-export function showNotice(kind, text) {
+export function showNotice(kind, text, options = {}) {
     const container = el('app-notice');
     if (!container) return;
 
     container.innerHTML = '';
     const alert = createEl('div', `alert alert-${kind} alert-dismissible fade show`, text);
     alert.setAttribute('role', 'alert');
+
+    if (options.actionLabel && typeof options.onAction === 'function') {
+        const actionBtn = createEl('button', 'btn btn-sm btn-outline-primary ms-2', options.actionLabel);
+        actionBtn.type = 'button';
+        actionBtn.addEventListener('click', options.onAction);
+        alert.appendChild(actionBtn);
+    }
 
     const closeBtn = createEl('button', 'btn-close');
     closeBtn.type = 'button';
@@ -83,6 +90,8 @@ export function showNotice(kind, text) {
     alert.appendChild(closeBtn);
 
     container.appendChild(alert);
+
+    if (options.autoClose === false) return;
 
     window.setTimeout(() => {
         if (!alert.isConnected) return;

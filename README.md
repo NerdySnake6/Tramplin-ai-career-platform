@@ -205,11 +205,43 @@ TRAMPLIN_ADMIN_EMAIL=admin@example.com
 TRAMPLIN_ADMIN_PASSWORD=надежный_пароль
 TRAMPLIN_ADMIN_NAME=Администратор
 TRAMPLIN_AUTO_VERIFY_EMPLOYERS=false
+SMTP_HOST=smtp-relay.brevo.com
+SMTP_PORT=587
+SMTP_USERNAME=логин_SMTP_из_Brevo
+SMTP_PASSWORD=ключ_SMTP_из_Brevo
+SMTP_FROM_EMAIL=noreply@tramplin.site
+SMTP_FROM_NAME=Tramplin
+BACKEND_PUBLIC_URL=https://tramplin.site/api
+FRONTEND_PUBLIC_URL=https://tramplin.site
+EMAIL_VERIFICATION_TTL_MINUTES=60
 FRONTEND_PORT=80
 FRONTEND_HTTPS_PORT=443
 ```
 
-### 2. Запустить проект
+### 2. Подключить отправку писем через Brevo
+
+Email-подтверждение использует SMTP и отправляет письма от имени `noreply@tramplin.site`.
+Секреты почты хранятся только в `.env` на VPS.
+
+1. Создай аккаунт Brevo и подтверди email аккаунта.
+2. В разделе `Transactional` открой `Senders, Domains, IPs`.
+3. Добавь и аутентифицируй домен `tramplin.site`.
+4. В DNS домена добавь записи, которые покажет Brevo. Для текущей настройки нужны:
+
+```text
+TXT    @                  brevo-code:код_из_Brevo
+CNAME  brevo1._domainkey  b1.tramplin-site.dkim.brevo.com
+CNAME  brevo2._domainkey  b2.tramplin-site.dkim.brevo.com
+TXT    _dmarc             v=DMARC1; p=none; rua=mailto:rua@dmarc.brevo.com
+```
+
+5. После статуса `Authenticated` создай sender `Tramplin <noreply@tramplin.site>`.
+6. В разделе `SMTP & API` сгенерируй новый SMTP key.
+7. Вставь SMTP login в `SMTP_USERNAME`, а новый SMTP key в `SMTP_PASSWORD` в `.env` на VPS.
+
+Если письма не отправляются, проверь `docker compose logs -f backend`, правильность `SMTP_USERNAME`/`SMTP_PASSWORD`, статус sender и аутентификацию домена в Brevo.
+
+### 3. Запустить проект
 
 ```bash
 docker compose up -d --build
@@ -221,7 +253,7 @@ docker compose up -d --build
 - backend будет доступен внутри Docker-сети как `backend:8000`
 - Swagger и OpenAPI в production закрыты nginx-конфигом
 
-### 3. Проверить состояние контейнеров
+### 4. Проверить состояние контейнеров
 
 ```bash
 docker compose ps

@@ -73,6 +73,7 @@ let mapAutoloadObserver = null;
 let mapResizeObserver = null;
 let mapHeightObserver = null;
 let userHasInteracted = false;
+let pendingVerificationEmail = '';
 
 let loginModal;
 let registerModal;
@@ -1325,12 +1326,60 @@ async function performLogin(email, password) {
         body: formData,
     });
 
-    if (!response.ok) return false;
+    if (!response.ok) {
+        const error = await response.json().catch(() => ({ detail: 'Не удалось войти.' }));
+        return {
+            ok: false,
+            status: response.status,
+            detail: typeof error.detail === 'string' ? error.detail : 'Не удалось войти.',
+        };
+    }
 
     const data = await response.json();
     setToken(data.access_token);
     await loadCurrentUser();
-    return true;
+    return { ok: true };
+}
+
+async function resendVerificationEmail(email) {
+    const targetEmail = (email || pendingVerificationEmail || el('loginEmail')?.value || '').trim();
+    if (!targetEmail) {
+        showNotice('warning', 'Укажи email, чтобы отправить письмо подтверждения повторно.');
+        return;
+    }
+
+    const response = await apiFetch('/auth/resend-verification', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email: targetEmail }),
+    });
+
+    if (!response.ok) {
+        const error = await response.json().catch(() => ({ detail: 'Не удалось отправить письмо повторно.' }));
+        showNotice('danger', typeof error.detail === 'string' ? error.detail : 'Не удалось отправить письмо повторно.');
+        return;
+    }
+
+    pendingVerificationEmail = targetEmail;
+    showNotice('success', `Если ${targetEmail} ожидает подтверждения, мы отправили письмо повторно.`, {
+        autoClose: false,
+    });
+}
+
+function showEmailVerificationNotice(kind, text, email) {
+    if (email) {
+        pendingVerificationEmail = email;
+    }
+
+    showNotice(kind, text, {
+        actionLabel: 'Отправить письмо еще раз',
+        onAction: () => {
+            void resendVerificationEmail(email);
+        },
+        autoClose: false,
+    });
 }
 
 async function handleLoginSubmit(event) {
@@ -1338,10 +1387,19 @@ async function handleLoginSubmit(event) {
 
     const email = el('loginEmail').value.trim();
     const password = el('loginPassword').value;
-    const ok = await performLogin(email, password);
+    const result = await performLogin(email, password);
 
-    if (!ok) {
-        showNotice('danger', 'Не удалось войти. Проверь email и пароль.');
+    if (!result.ok) {
+        if (result.status === 403) {
+            showEmailVerificationNotice(
+                'warning',
+                `Сначала подтверди email. Мы отправили ссылку на ${email}.`,
+                email
+            );
+            return;
+        }
+
+        showNotice('danger', result.detail || 'Не удалось войти. Проверь email и пароль.');
         return;
     }
 
@@ -1406,15 +1464,24 @@ async function handleRegisterSubmit(event) {
 
     registerModal.hide();
     event.target.reset();
+    el('loginEmail').value = payload.email;
+    showEmailVerificationNotice(
+        'success',
+        `Аккаунт создан. Мы отправили письмо на ${payload.email}. Подтверди почту, затем войди в систему.`,
+        payload.email
+    );
+}
 
-    // Автоматически логиним после регистрации
-    const loggedIn = await performLogin(payload.email, payload.password);
-    if (loggedIn) {
-        showNotice('success', 'Аккаунт создан. Добро пожаловать!');
-    } else {
-        el('loginEmail').value = payload.email;
-        showNotice('success', 'Аккаунт создан. Войди в систему.');
-    }
+function handleEmailVerificationQuery() {
+    const url = new URL(window.location.href);
+    if (url.searchParams.get('verified') !== '1') return;
+
+    showNotice('success', 'Email подтвержден. Теперь можно войти.', { autoClose: false });
+    loginModal.show();
+    el('loginEmail')?.focus();
+
+    url.searchParams.delete('verified');
+    window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
 }
 
 async function handleProfileSubmit(event) {
@@ -1666,6 +1733,7 @@ async function bootstrap() {
     renderProfileSection();
     renderFavoritesSummary();
     renderMapShellState();
+    handleEmailVerificationQuery();
     setupMapAutoload();
     setupMapHeightSync();
     setupMapResizeSync();
