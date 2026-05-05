@@ -12,7 +12,7 @@ class EmailDeliveryError(RuntimeError):
 
 def smtp_port() -> int:
     """Возвращает SMTP-порт из окружения."""
-    return int(os.getenv("SMTP_PORT", "587"))
+    return int(os.getenv("SMTP_PORT", "465"))
 
 
 def smtp_required_env(name: str) -> str:
