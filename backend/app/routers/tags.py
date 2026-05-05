@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app import models, schemas
 from app.database import get_db
 from app.dependencies import require_roles
+from app.tag_validation import ensure_tag_catalog_limit, validate_tag_name
 
 router = APIRouter(prefix="/tags", tags=["tags"])
 
@@ -31,11 +32,14 @@ def create_tag(
     current_user: models.User = Depends(require_roles("employer", "curator", "admin")),
 ):
     """Добавляет новый тег в общий справочник платформы."""
-    existing_tag = db.query(models.Tag).filter(models.Tag.name.ilike(payload.name.strip())).first()
+    tag_name = validate_tag_name(payload.name)
+    existing_tag = db.query(models.Tag).filter(models.Tag.name.ilike(tag_name)).first()
     if existing_tag:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Tag already exists")
 
-    tag = models.Tag(name=payload.name.strip(), category=payload.category)
+    ensure_tag_catalog_limit(db, payload.category)
+
+    tag = models.Tag(name=tag_name, category=payload.category)
     db.add(tag)
     db.commit()
     db.refresh(tag)

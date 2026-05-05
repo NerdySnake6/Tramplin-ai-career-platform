@@ -1615,14 +1615,16 @@ function bindEvents() {
     });
 
     el('heroExploreBtn').addEventListener('click', () => {
-        if (state.activeView !== 'home') {
-            setActiveView('home');
+        if (state.activeView !== 'home' || currentPublicRoute.key !== 'home') {
+            navigateToPublicPath('/');
         }
         if (state.currentUser?.role === 'applicant') {
             void ensureMapReady({ scroll: true });
             return;
         }
-        el('homeExplorerCard')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        requestAnimationFrame(() => {
+            el('homeExplorerCard')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
     });
     el('heroRegisterBtn').addEventListener('click', (event) => {
         event.preventDefault();

@@ -7,6 +7,7 @@ from app.auth import create_access_token
 from app.email_service import EmailDeliveryError
 from app.routers import auth as auth_router
 from app.routers.opportunities import EMPLOYER_FREE_OPPORTUNITY_LIMIT
+from app.tag_validation import MAX_TAGS_PER_CATEGORY
 
 
 def utc_now_naive() -> datetime:
@@ -1065,6 +1066,49 @@ def test_tags_catalog_creation_and_public_filtering(client, db_session):
     assert filtered_response.status_code == 200
     assert len(filtered_response.json()) == 1
     assert filtered_response.json()[0]["tags"][0]["name"] == "Data Science"
+
+
+def test_tag_creation_rejects_zalgo_and_enforces_category_limit(client, db_session):
+    """Проверяет защиту справочника тегов от Zalgo-текста и переполнения категории."""
+    employer_user = models.User(
+        email="tag-limits@example.com",
+        hashed_password="hash",
+        display_name="Tag Limits",
+        role="employer",
+        is_active=True,
+        is_verified=True,
+    )
+    db_session.add(employer_user)
+    db_session.commit()
+    db_session.refresh(employer_user)
+
+    employer_token = create_access_token({"sub": employer_user.email})
+    headers = auth_headers(employer_token)
+
+    zalgo_response = client.post(
+        "/tags/",
+        headers=headers,
+        json={"name": "P\u0335y\u0336t\u0337h\u0338o\u0334n", "category": "tech"},
+    )
+    assert zalgo_response.status_code == 400
+    assert "комбинирующие" in zalgo_response.json()["detail"]
+
+    db_session.query(models.Tag).filter(models.Tag.category == "tech").delete()
+    db_session.add_all(
+        models.Tag(name=f"Tech Limit {index}", category="tech")
+        for index in range(MAX_TAGS_PER_CATEGORY)
+    )
+    db_session.commit()
+
+    limit_response = client.post(
+        "/tags/",
+        headers=headers,
+        json={"name": "Overflow Tech", "category": "tech"},
+    )
+    assert limit_response.status_code == 400
+    assert limit_response.json()["detail"] == (
+        f"В одной категории может быть не больше {MAX_TAGS_PER_CATEGORY} тегов."
+    )
 
 
 def test_curator_can_delete_unused_tags_and_cannot_delete_used_tags(client, db_session):
