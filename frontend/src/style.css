@@ -11,6 +11,18 @@ body {
     min-height: 100vh;
 }
 
+.api-busy a.btn {
+    opacity: 0.65;
+    pointer-events: none;
+}
+
+.api-busy button,
+.api-busy input[type="button"],
+.api-busy input[type="submit"],
+.api-busy input[type="reset"] {
+    cursor: progress;
+}
+
 .skip-link {
     position: absolute;
     left: 1rem;

@@ -221,7 +221,7 @@ export function createEmployerController({
 
             const toggleBtn = createEl(
                 'button',
-                `btn btn-sm ${opportunity.is_active ? 'btn-outline-warning' : 'btn-outline-success'}`,
+                `btn btn-sm ${opportunity.is_active ? 'btn-warning' : 'btn-outline-success'}`,
                 opportunity.is_active ? 'Перевести в архив' : 'Опубликовать'
             );
             toggleBtn.type = 'button';
