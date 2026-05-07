@@ -218,20 +218,16 @@ function showModalNotice(kind, text, options = {}) {
     icon.setAttribute('aria-hidden', 'true');
 
     const content = createEl('div', 'app-modal-notice-content');
-    const header = createEl('div', 'app-modal-notice-header');
-    const titleEl = createEl('strong', 'app-modal-notice-title', noticeTitle(kind));
     const closeBtn = createModalNoticeCloseButton(noticeEl);
     const body = createEl('div', 'app-modal-notice-body', text);
     const actionBtn = createModalNoticeAction(options);
 
-    header.appendChild(titleEl);
-    header.appendChild(closeBtn);
-    content.appendChild(header);
     content.appendChild(body);
     if (actionBtn) content.appendChild(actionBtn);
 
     noticeEl.appendChild(icon);
     noticeEl.appendChild(content);
+    noticeEl.appendChild(closeBtn);
 
     bindModalNoticeCleanup(modalEl);
     modalBody.querySelectorAll('.app-modal-notice').forEach((item) => dismissModalNotice(item));
