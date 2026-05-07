@@ -69,35 +69,171 @@ export function renderAlert(container, kind, text) {
 }
 
 export function showNotice(kind, text, options = {}) {
-    const container = el('app-notice');
-    if (!container) return;
+    const toastOptions = { ...options };
+    delete toastOptions.inline;
+    showToast(kind, noticeTitle(kind), text, toastOptions);
+}
 
-    container.innerHTML = '';
-    const alert = createEl('div', `alert alert-${kind} alert-dismissible fade show`, text);
-    alert.setAttribute('role', 'alert');
+const TOAST_LIMIT = 3;
+const DEFAULT_TOAST_KIND = 'info';
 
-    if (options.actionLabel && typeof options.onAction === 'function') {
-        const actionBtn = createEl('button', 'btn btn-sm btn-outline-primary ms-2', options.actionLabel);
-        actionBtn.type = 'button';
-        actionBtn.addEventListener('click', options.onAction);
-        alert.appendChild(actionBtn);
+const TOAST_CONFIG = {
+    success: {
+        title: 'Готово',
+        icon: '✓',
+        duration: 5000,
+        role: 'status',
+        live: 'polite',
+    },
+    danger: {
+        title: 'Ошибка',
+        icon: '!',
+        duration: 10000,
+        role: 'alert',
+        live: 'assertive',
+    },
+    warning: {
+        title: 'Внимание',
+        icon: '!',
+        duration: 8000,
+        role: 'status',
+        live: 'polite',
+    },
+    info: {
+        title: 'Сообщение',
+        icon: 'i',
+        duration: 5000,
+        role: 'status',
+        live: 'polite',
+    },
+};
+
+function noticeTitle(kind) {
+    return toastConfig(kind).title;
+}
+
+function toastConfig(kind) {
+    return TOAST_CONFIG[kind] || TOAST_CONFIG[DEFAULT_TOAST_KIND];
+}
+
+function toastKindClass(kind) {
+    return TOAST_CONFIG[kind] ? kind : DEFAULT_TOAST_KIND;
+}
+
+function toastDuration(config, options) {
+    if (options.autoClose === false || options.sticky === true || Boolean(options.actionLabel)) return null;
+    if (Number.isFinite(options.autoClose) && options.autoClose > 0) return options.autoClose;
+    return config.duration;
+}
+
+function dismissToast(toastEl) {
+    if (!toastEl || toastEl.dataset.closing === 'true') return;
+
+    toastEl.dataset.closing = 'true';
+    if (typeof toastEl.cleanupToastTimer === 'function') {
+        toastEl.cleanupToastTimer();
     }
 
-    const closeBtn = createEl('button', 'btn-close');
-    closeBtn.type = 'button';
-    closeBtn.setAttribute('data-bs-dismiss', 'alert');
-    closeBtn.setAttribute('aria-label', 'Закрыть');
-    alert.appendChild(closeBtn);
+    toastEl.classList.add('app-toast-exit');
+    toastEl.classList.remove('show');
 
-    container.appendChild(alert);
-
-    if (options.autoClose === false) return;
-
+    const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     window.setTimeout(() => {
-        if (!alert.isConnected) return;
-        const instance = window.bootstrap.Alert.getOrCreateInstance(alert);
-        instance.close();
-    }, 3500);
+        toastEl.remove();
+    }, prefersReducedMotion ? 0 : 180);
+}
+
+function trimToastStack(container) {
+    const activeToasts = Array.from(container.querySelectorAll('.app-toast')).filter((item) => item.dataset.closing !== 'true');
+    activeToasts.slice(TOAST_LIMIT).forEach((item) => dismissToast(item));
+}
+
+function createToastCloseButton(toastEl) {
+    const closeBtn = createEl('button', 'btn-close app-toast-close');
+    closeBtn.type = 'button';
+    closeBtn.setAttribute('aria-label', 'Закрыть');
+    closeBtn.addEventListener('click', (event) => {
+        event.stopPropagation();
+        dismissToast(toastEl);
+    });
+    return closeBtn;
+}
+
+function createToastAction(options) {
+    if (!options.actionLabel || typeof options.onAction !== 'function') return null;
+
+    const actionBtn = createEl('button', 'btn btn-sm app-toast-action', options.actionLabel);
+    actionBtn.type = 'button';
+    actionBtn.addEventListener('click', (event) => {
+        event.stopPropagation();
+        options.onAction();
+    });
+    return actionBtn;
+}
+
+function bindToastTimer(toastEl, progressBar, duration, options) {
+    if (!duration) return () => {};
+
+    let timeoutId;
+    let startedAt = 0;
+    let remaining = duration;
+    let isHoverPaused = false;
+    let isFocusPaused = false;
+
+    const clearTimer = () => {
+        if (!timeoutId) return;
+        window.clearTimeout(timeoutId);
+        timeoutId = null;
+    };
+
+    const resume = () => {
+        if (toastEl.dataset.closing === 'true') return;
+        if (timeoutId) return;
+        if (remaining <= 0) {
+            dismissToast(toastEl);
+            return;
+        }
+
+        startedAt = Date.now();
+        timeoutId = window.setTimeout(() => dismissToast(toastEl), remaining);
+        progressBar.style.animationPlayState = 'running';
+    };
+
+    const pause = () => {
+        if (!timeoutId) return;
+        remaining = Math.max(0, remaining - (Date.now() - startedAt));
+        clearTimer();
+        progressBar.style.animationPlayState = 'paused';
+    };
+
+    const resumeWhenReady = () => {
+        if (isHoverPaused || isFocusPaused) return;
+        resume();
+    };
+
+    resume();
+
+    if (options.pauseOnHover !== false) {
+        toastEl.addEventListener('mouseenter', () => {
+            isHoverPaused = true;
+            pause();
+        });
+        toastEl.addEventListener('mouseleave', () => {
+            isHoverPaused = false;
+            resumeWhenReady();
+        });
+        toastEl.addEventListener('focusin', () => {
+            isFocusPaused = true;
+            pause();
+        });
+        toastEl.addEventListener('focusout', (event) => {
+            if (toastEl.contains(event.relatedTarget)) return;
+            isFocusPaused = false;
+            resumeWhenReady();
+        });
+    }
+
+    return clearTimer;
 }
 
 export function statusLabel(status) {
@@ -144,36 +280,65 @@ export function workFormatLabel(workFormat) {
     return workFormat;
 }
 
-export function showToast(kind, title, text) {
+export function showToast(kind, title, text, options = {}) {
     const container = el('toastContainer');
     if (!container) return;
 
-    const toastId = `toast-${Date.now()}`;
-    const bgClass = kind === 'danger' ? 'text-bg-danger' : 
-                    kind === 'success' ? 'text-bg-success' : 
-                    kind === 'warning' ? 'text-bg-warning' : 'text-bg-primary';
+    const config = toastConfig(kind);
+    const normalizedKind = toastKindClass(kind);
+    const duration = toastDuration(config, options);
+    const toastId = `toast-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 
-    const toastEl = createEl('div', `toast ${bgClass} border-0 mb-2`);
-    toastEl.setAttribute('role', 'alert');
-    toastEl.setAttribute('aria-live', 'assertive');
+    const toastEl = createEl('div', `toast app-toast app-toast-${normalizedKind} border-0`);
+    toastEl.setAttribute('role', config.role);
+    toastEl.setAttribute('aria-live', config.live);
     toastEl.setAttribute('aria-atomic', 'true');
     toastEl.id = toastId;
 
-    const header = createEl('div', 'toast-header');
-    header.innerHTML = `<strong class="me-auto">${title}</strong><button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>`;
-    
-    const body = createEl('div', 'toast-body');
-    body.textContent = text;
+    const shell = createEl('div', 'app-toast-shell');
+    const icon = createEl('span', 'app-toast-icon', config.icon);
+    icon.setAttribute('aria-hidden', 'true');
 
-    toastEl.appendChild(header);
-    toastEl.appendChild(body);
-    container.appendChild(toastEl);
+    const content = createEl('div', 'app-toast-content');
+    const header = createEl('div', 'app-toast-header');
+    const titleEl = createEl('strong', 'app-toast-title', title || config.title);
+    const closeBtn = createToastCloseButton(toastEl);
 
-    if (window.bootstrap && window.bootstrap.Toast) {
-        const bsToast = new window.bootstrap.Toast(toastEl, { delay: 5000 });
-        bsToast.show();
-        toastEl.addEventListener('hidden.bs.toast', () => {
-            toastEl.remove();
+    header.appendChild(titleEl);
+    header.appendChild(closeBtn);
+
+    const body = createEl('div', 'app-toast-body', text);
+    const actionBtn = createToastAction(options);
+
+    content.appendChild(header);
+    content.appendChild(body);
+    if (actionBtn) content.appendChild(actionBtn);
+
+    shell.appendChild(icon);
+    shell.appendChild(content);
+    toastEl.appendChild(shell);
+
+    if (duration) {
+        const progress = createEl('div', 'app-toast-progress');
+        const progressBar = createEl('span', 'app-toast-progress-bar');
+        progressBar.style.setProperty('--toast-duration', `${duration}ms`);
+        progress.appendChild(progressBar);
+        toastEl.appendChild(progress);
+        toastEl.cleanupToastTimer = bindToastTimer(toastEl, progressBar, duration, options);
+    }
+
+    if (options.closeOnClick === true) {
+        toastEl.addEventListener('click', (event) => {
+            const target = event.target;
+            if (target && typeof target.closest === 'function' && target.closest('button, a, input, textarea, select')) return;
+            dismissToast(toastEl);
         });
     }
+
+    container.prepend(toastEl);
+    trimToastStack(container);
+
+    window.requestAnimationFrame(() => {
+        toastEl.classList.add('show');
+    });
 }
