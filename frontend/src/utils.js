@@ -69,9 +69,16 @@ export function renderAlert(container, kind, text) {
 }
 
 export function showNotice(kind, text, options = {}) {
-    const toastOptions = { ...options };
-    delete toastOptions.inline;
-    showToast(kind, noticeTitle(kind), text, toastOptions);
+    const noticeOptions = { ...options };
+    const placement = noticeOptions.placement || 'auto';
+    delete noticeOptions.inline;
+    delete noticeOptions.placement;
+
+    if (shouldRenderInModal(kind, placement) && showModalNotice(kind, text, noticeOptions)) {
+        return;
+    }
+
+    showToast(kind, noticeTitle(kind), text, noticeOptions);
 }
 
 const TOAST_LIMIT = 3;
@@ -91,6 +98,7 @@ const TOAST_CONFIG = {
         duration: 10000,
         role: 'alert',
         live: 'assertive',
+        sticky: true,
     },
     warning: {
         title: 'Внимание',
@@ -98,6 +106,7 @@ const TOAST_CONFIG = {
         duration: 8000,
         role: 'status',
         live: 'polite',
+        sticky: true,
     },
     info: {
         title: 'Сообщение',
@@ -123,7 +132,122 @@ function toastKindClass(kind) {
 function toastDuration(config, options) {
     if (options.autoClose === false || options.sticky === true || Boolean(options.actionLabel)) return null;
     if (Number.isFinite(options.autoClose) && options.autoClose > 0) return options.autoClose;
+    if (config.sticky === true) return null;
     return config.duration;
+}
+
+function shouldRenderInModal(kind, placement) {
+    if (placement === 'global') return false;
+    if (placement === 'modal') return true;
+    return (kind === 'danger' || kind === 'warning') && Boolean(activeModal());
+}
+
+function activeModal() {
+    const modals = Array.from(document.querySelectorAll('.modal.show'));
+    return modals[modals.length - 1] || null;
+}
+
+function cleanupModalNoticeTimer(noticeEl) {
+    if (typeof noticeEl.cleanupModalNoticeTimer === 'function') {
+        noticeEl.cleanupModalNoticeTimer();
+    }
+}
+
+function dismissModalNotice(noticeEl) {
+    if (!noticeEl) return;
+    cleanupModalNoticeTimer(noticeEl);
+    noticeEl.remove();
+}
+
+function bindModalNoticeCleanup(modalEl) {
+    if (modalEl.dataset.noticeCleanupBound === 'true') return;
+
+    modalEl.dataset.noticeCleanupBound = 'true';
+    modalEl.addEventListener('hidden.bs.modal', () => {
+        modalEl.querySelectorAll('.app-modal-notice').forEach((noticeEl) => dismissModalNotice(noticeEl));
+    });
+}
+
+function createModalNoticeCloseButton(noticeEl) {
+    const closeBtn = createEl('button', 'btn-close app-modal-notice-close');
+    closeBtn.type = 'button';
+    closeBtn.setAttribute('aria-label', 'Закрыть');
+    closeBtn.addEventListener('click', () => dismissModalNotice(noticeEl));
+    return closeBtn;
+}
+
+function createModalNoticeAction(options) {
+    if (!options.actionLabel || typeof options.onAction !== 'function') return null;
+
+    const actionBtn = createEl('button', 'btn btn-sm app-modal-notice-action', options.actionLabel);
+    actionBtn.type = 'button';
+    actionBtn.addEventListener('click', () => {
+        options.onAction();
+    });
+    return actionBtn;
+}
+
+function scrollModalNoticeIntoView(modalBody, noticeEl) {
+    const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const behavior = prefersReducedMotion ? 'auto' : 'smooth';
+
+    if (typeof modalBody.scrollTo === 'function') {
+        modalBody.scrollTo({ top: 0, behavior });
+    } else {
+        modalBody.scrollTop = 0;
+    }
+
+    if (typeof noticeEl.scrollIntoView === 'function') {
+        noticeEl.scrollIntoView({ block: 'nearest', behavior });
+    }
+}
+
+function showModalNotice(kind, text, options = {}) {
+    const modalEl = activeModal();
+    const modalBody = modalEl?.querySelector('.modal-body');
+    if (!modalBody) return false;
+
+    const config = toastConfig(kind);
+    const normalizedKind = toastKindClass(kind);
+    const noticeEl = createEl('div', `app-modal-notice app-modal-notice-${normalizedKind}`);
+    noticeEl.setAttribute('role', config.role);
+    noticeEl.setAttribute('aria-live', config.live);
+    noticeEl.setAttribute('aria-atomic', 'true');
+
+    const icon = createEl('span', 'app-modal-notice-icon', config.icon);
+    icon.setAttribute('aria-hidden', 'true');
+
+    const content = createEl('div', 'app-modal-notice-content');
+    const header = createEl('div', 'app-modal-notice-header');
+    const titleEl = createEl('strong', 'app-modal-notice-title', noticeTitle(kind));
+    const closeBtn = createModalNoticeCloseButton(noticeEl);
+    const body = createEl('div', 'app-modal-notice-body', text);
+    const actionBtn = createModalNoticeAction(options);
+
+    header.appendChild(titleEl);
+    header.appendChild(closeBtn);
+    content.appendChild(header);
+    content.appendChild(body);
+    if (actionBtn) content.appendChild(actionBtn);
+
+    noticeEl.appendChild(icon);
+    noticeEl.appendChild(content);
+
+    bindModalNoticeCleanup(modalEl);
+    modalBody.querySelectorAll('.app-modal-notice').forEach((item) => dismissModalNotice(item));
+    modalBody.prepend(noticeEl);
+
+    const duration = toastDuration(config, options);
+    if (duration) {
+        const timeoutId = window.setTimeout(() => dismissModalNotice(noticeEl), duration);
+        noticeEl.cleanupModalNoticeTimer = () => window.clearTimeout(timeoutId);
+    }
+
+    window.requestAnimationFrame(() => {
+        scrollModalNoticeIntoView(modalBody, noticeEl);
+    });
+
+    return true;
 }
 
 function dismissToast(toastEl) {

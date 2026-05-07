@@ -1476,9 +1476,15 @@ function handleEmailVerificationQuery() {
     const url = new URL(window.location.href);
     if (url.searchParams.get('verified') !== '1') return;
 
-    showNotice('success', 'Email подтвержден. Теперь можно войти.', { autoClose: false });
+    const loginModalEl = el('loginModal');
+    loginModalEl.addEventListener('shown.bs.modal', () => {
+        showNotice('success', 'Email подтвержден. Теперь можно войти.', {
+            autoClose: false,
+            placement: 'modal',
+        });
+        el('loginEmail')?.focus();
+    }, { once: true });
     loginModal.show();
-    el('loginEmail')?.focus();
 
     url.searchParams.delete('verified');
     window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
