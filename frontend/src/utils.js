@@ -139,12 +139,13 @@ function toastDuration(config, options) {
 function shouldRenderInModal(kind, placement) {
     if (placement === 'global') return false;
     if (placement === 'modal') return true;
-    return (kind === 'danger' || kind === 'warning') && Boolean(activeModal());
+    return Boolean(activeModal());
 }
 
 function activeModal() {
-    const modals = Array.from(document.querySelectorAll('.modal.show'));
-    return modals[modals.length - 1] || null;
+    const modals = Array.from(document.querySelectorAll('.modal'));
+    const visibleModal = modals.find(m => m.classList.contains('show') || (window.getComputedStyle(m).display === 'block' && m.offsetWidth > 0));
+    return visibleModal || null;
 }
 
 function cleanupModalNoticeTimer(noticeEl) {
