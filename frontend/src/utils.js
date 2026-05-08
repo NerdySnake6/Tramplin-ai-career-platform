@@ -260,7 +260,7 @@ function dismissToast(toastEl) {
     const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     window.setTimeout(() => {
         toastEl.remove();
-    }, prefersReducedMotion ? 0 : 180);
+    }, prefersReducedMotion ? 0 : 300);
 }
 
 function trimToastStack(container) {
@@ -269,9 +269,10 @@ function trimToastStack(container) {
 }
 
 function createToastCloseButton(toastEl) {
-    const closeBtn = createEl('button', 'btn-close app-toast-close');
+    const closeBtn = createEl('button', 'app-toast-close');
     closeBtn.type = 'button';
     closeBtn.setAttribute('aria-label', 'Закрыть');
+    closeBtn.innerHTML = '<svg aria-hidden="true" viewBox="0 0 14 16" fill="currentColor"><path fill-rule="evenodd" d="M7.71 8.23l3.75 3.75-1.48 1.48-3.75-3.75-3.75 3.75L1 11.98l3.75-3.75L1 4.48 2.48 3l3.75 3.75L9.98 3l1.48 1.48-3.75 3.75z"></path></svg>';
     closeBtn.addEventListener('click', (event) => {
         event.stopPropagation();
         dismissToast(toastEl);
