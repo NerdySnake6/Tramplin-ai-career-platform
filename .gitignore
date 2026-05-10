@@ -12,3 +12,4 @@ frontend/dist/
 !.env.example
 .serena/
 .DS_Store
+.idea/
