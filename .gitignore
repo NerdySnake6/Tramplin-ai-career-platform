@@ -11,5 +11,6 @@ frontend/dist/
 .env.*
 !.env.example
 .serena/
+.antigravityignore
 .DS_Store
 .idea/
