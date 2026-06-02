@@ -3,7 +3,10 @@ import {
     el,
     formatDate,
     includesText,
+    isOpportunityExpirationValueAllowed,
+    minimumOpportunityExpirationInputValue,
     normalizeText,
+    OPPORTUNITY_EXPIRATION_VALIDATION_MESSAGE,
     selectedTagIdsFromContainer,
     showNotice,
     statusLabel,
@@ -280,6 +283,7 @@ export function createEmployerController({
         el('employerOpportunityLocation').value = '';
         el('employerOpportunitySalary').value = '';
         el('employerOpportunityExpiresAt').value = '';
+        el('employerOpportunityExpiresAt').min = minimumOpportunityExpirationInputValue();
         el('employerOpportunityEventDate').value = '';
         el('employerOpportunityDescription').value = '';
         el('employerOpportunityActive').checked = true;
@@ -316,6 +320,7 @@ export function createEmployerController({
         el('employerOpportunityWorkFormat').value = opportunity.work_format || 'office';
         el('employerOpportunityLocation').value = opportunity.location || '';
         el('employerOpportunitySalary').value = opportunity.salary_range || '';
+        el('employerOpportunityExpiresAt').min = minimumOpportunityExpirationInputValue();
         el('employerOpportunityExpiresAt').value = toDateTimeLocalValue(opportunity.expires_at);
         el('employerOpportunityEventDate').value = toDateTimeLocalValue(opportunity.event_date);
         el('employerOpportunityDescription').value = opportunity.description || '';
@@ -364,8 +369,8 @@ export function createEmployerController({
             work_format: el('employerOpportunityWorkFormat').value,
             location: (el('employerOpportunityLocation').value || '').trim(),
             salary_range: normalizeText(el('employerOpportunitySalary').value),
-            expires_at: el('employerOpportunityExpiresAt').value ? new Date(el('employerOpportunityExpiresAt').value).toISOString() : null,
-            event_date: el('employerOpportunityEventDate').value ? new Date(el('employerOpportunityEventDate').value).toISOString() : null,
+            expires_at: normalizeText(el('employerOpportunityExpiresAt').value),
+            event_date: normalizeText(el('employerOpportunityEventDate').value),
             is_active: el('employerOpportunityActive').checked,
             tag_ids: selectedTagIdsFromContainer('employerOpportunityTagOptions'),
         };
@@ -503,6 +508,11 @@ export function createEmployerController({
 
     async function handleEmployerOpportunitySubmit(event) {
         event.preventDefault();
+        if (!isOpportunityExpirationValueAllowed(el('employerOpportunityExpiresAt').value)) {
+            showNotice('warning', OPPORTUNITY_EXPIRATION_VALIDATION_MESSAGE);
+            return;
+        }
+
         const payload = buildEmployerOpportunityPayload();
         const isEdit = Boolean(state.pendingEmployerOpportunityId);
         const saved = await saveEmployerOpportunity({

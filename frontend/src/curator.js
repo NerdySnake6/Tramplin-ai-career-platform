@@ -3,8 +3,11 @@ import {
     curatorRoleLabel,
     el,
     includesText,
+    isOpportunityExpirationValueAllowed,
+    minimumOpportunityExpirationInputValue,
     normalizeText,
     normalizeUrl,
+    OPPORTUNITY_EXPIRATION_VALIDATION_MESSAGE,
     showNotice,
     toDateTimeLocalValue,
 } from './utils.js';
@@ -355,6 +358,7 @@ export function createCuratorController({
         el('curatorOpportunityWorkFormat').value = opportunity.work_format || 'office';
         el('curatorOpportunityLocation').value = opportunity.location || '';
         el('curatorOpportunitySalary').value = opportunity.salary_range || '';
+        el('curatorOpportunityExpiresAt').min = minimumOpportunityExpirationInputValue();
         el('curatorOpportunityExpiresAt').value = toDateTimeLocalValue(opportunity.expires_at);
         el('curatorOpportunityDescription').value = opportunity.description || '';
         el('curatorOpportunityActive').checked = Boolean(opportunity.is_active);
@@ -498,6 +502,10 @@ export function createCuratorController({
     async function handleCuratorOpportunitySubmit(event) {
         event.preventDefault();
         if (!state.pendingCuratorOpportunityId) return;
+        if (!isOpportunityExpirationValueAllowed(el('curatorOpportunityExpiresAt').value)) {
+            showNotice('warning', OPPORTUNITY_EXPIRATION_VALIDATION_MESSAGE);
+            return;
+        }
 
         await updateCuratorOpportunity(state.pendingCuratorOpportunityId, {
             title: normalizeText(el('curatorOpportunityTitle').value),
@@ -505,7 +513,7 @@ export function createCuratorController({
             work_format: el('curatorOpportunityWorkFormat').value,
             location: normalizeText(el('curatorOpportunityLocation').value),
             salary_range: normalizeText(el('curatorOpportunitySalary').value),
-            expires_at: el('curatorOpportunityExpiresAt').value ? new Date(el('curatorOpportunityExpiresAt').value).toISOString() : null,
+            expires_at: normalizeText(el('curatorOpportunityExpiresAt').value),
             description: normalizeText(el('curatorOpportunityDescription').value),
             is_active: el('curatorOpportunityActive').checked,
         });

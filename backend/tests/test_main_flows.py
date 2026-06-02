@@ -5,6 +5,7 @@ from datetime import UTC, datetime, timedelta
 from app import models
 from app.auth import create_access_token
 from app.email_service import EmailDeliveryError
+from app.opportunity_visibility import is_expiration_datetime_allowed, normalize_expiration_datetime
 from app.routers import auth as auth_router
 from app.routers.opportunities import EMPLOYER_FREE_OPPORTUNITY_LIMIT
 from app.tag_validation import MAX_TAGS_PER_CATEGORY
@@ -13,6 +14,30 @@ from app.tag_validation import MAX_TAGS_PER_CATEGORY
 def utc_now_naive() -> datetime:
     """Возвращает текущее UTC-время без timezone для SQLite DateTime."""
     return datetime.now(UTC).replace(tzinfo=None)
+
+
+def test_normalize_expiration_datetime_keeps_midnight_visible_through_day():
+    """Проверяет, что срок в 00:00 считается концом выбранного дня."""
+    expires_at = datetime(2026, 6, 3)
+
+    assert normalize_expiration_datetime(expires_at) == datetime(
+        2026, 6, 3, 23, 59, 59, 999999
+    )
+
+
+def test_normalize_expiration_datetime_preserves_explicit_time():
+    """Проверяет, что явно выбранное время срока действия не меняется."""
+    expires_at = datetime(2026, 6, 3, 18, 30)
+
+    assert normalize_expiration_datetime(expires_at) == expires_at
+
+
+def test_is_expiration_datetime_allowed_requires_minimum_lifetime():
+    """Проверяет минимальный срок действия публичной карточки."""
+    now = datetime(2026, 6, 3, 12, 0)
+
+    assert not is_expiration_datetime_allowed(datetime(2026, 6, 4, 11, 59), now)
+    assert is_expiration_datetime_allowed(datetime(2026, 6, 4, 12, 0), now)
 
 
 def register_user(client, *, email, password, display_name, role):
@@ -597,6 +622,22 @@ def test_employer_can_manage_own_opportunities(client, db_session):
         password="supersecret",
     )
     headers = auth_headers(token)
+
+    invalid_expiration_response = client.post(
+        "/opportunities/",
+        headers=headers,
+        json={
+            "title": "Too Short Vacancy",
+            "description": "Карточка с некорректно коротким сроком действия должна быть отклонена API.",
+            "type": "job",
+            "work_format": "office",
+            "location": "Москва, ул. Льва Толстого, 16",
+            "expires_at": (utc_now_naive() + timedelta(hours=12)).isoformat(),
+            "tag_ids": [],
+        },
+    )
+    assert invalid_expiration_response.status_code == 422
+    assert "минимум на 1 день" in invalid_expiration_response.json()["detail"]
 
     create_response = client.post(
         "/opportunities/",

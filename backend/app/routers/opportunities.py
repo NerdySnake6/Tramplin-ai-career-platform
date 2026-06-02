@@ -1,6 +1,7 @@
 """Маршруты для просмотра и управления возможностями на платформе."""
 
 import logging
+from datetime import datetime
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -11,11 +12,24 @@ from app import models, schemas
 from app.database import get_db
 from app.dependencies import require_roles, get_current_active_user
 from app.geocoder import GeocodingError, geocode_address, geocoder_is_configured
-from app.opportunity_visibility import public_opportunity_filters
+from app.opportunity_visibility import (
+    is_expiration_datetime_allowed,
+    normalize_expiration_datetime,
+    public_opportunity_filters,
+)
 
 router = APIRouter(prefix="/opportunities", tags=["opportunities"])
 logger = logging.getLogger(__name__)
 EMPLOYER_FREE_OPPORTUNITY_LIMIT = 5
+OPPORTUNITY_EXPIRATION_ERROR = "Срок действия должен быть минимум на 1 день позже текущего времени."
+
+
+def normalize_validated_expires_at(expires_at: datetime | None) -> datetime | None:
+    """Нормализует и проверяет срок действия карточки возможности."""
+    normalized = normalize_expiration_datetime(expires_at)
+    if not is_expiration_datetime_allowed(normalized):
+        raise HTTPException(status_code=422, detail=OPPORTUNITY_EXPIRATION_ERROR)
+    return normalized
 
 
 def should_geocode(location: Optional[str], work_format: Optional[str]) -> bool:
@@ -93,6 +107,7 @@ def create_opportunity(
     opp_payload = opp_data.model_dump(exclude={"tag_ids"})
     opp_payload["lat"] = lat
     opp_payload["lng"] = lng
+    opp_payload["expires_at"] = normalize_validated_expires_at(opp_payload.get("expires_at"))
 
     db_opp = models.Opportunity(
         **opp_payload,
@@ -244,6 +259,8 @@ def update_opportunity(
         raise HTTPException(status_code=403, detail="Not enough permissions")
 
     update_data = opp_data.model_dump(exclude_unset=True, exclude={"tag_ids"})
+    if "expires_at" in update_data:
+        update_data["expires_at"] = normalize_validated_expires_at(update_data["expires_at"])
 
     location = update_data.get("location", opp.location)
     work_format = update_data.get("work_format", opp.work_format)

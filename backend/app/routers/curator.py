@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session, joinedload
 from app import auth, models, schemas
 from app.database import get_db
 from app.dependencies import require_roles
+from app.routers.opportunities import normalize_validated_expires_at
 
 
 router = APIRouter(prefix="/curator", tags=["curator"])
@@ -219,6 +220,9 @@ def update_opportunity(
         raise HTTPException(status_code=404, detail="Opportunity not found")
 
     update_data = payload.model_dump(exclude_unset=True)
+    if "expires_at" in update_data:
+        update_data["expires_at"] = normalize_validated_expires_at(update_data["expires_at"])
+
     for field, value in update_data.items():
         setattr(opportunity, field, value)
 

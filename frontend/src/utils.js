@@ -34,6 +34,35 @@ export function toDateTimeLocalValue(value) {
     return local.toISOString().slice(0, 16);
 }
 
+const DAY_IN_MS = 24 * 60 * 60 * 1000;
+
+export const OPPORTUNITY_EXPIRATION_VALIDATION_MESSAGE = 'Срок действия должен быть минимум на 1 день позже текущего времени.';
+
+export function minimumOpportunityExpirationInputValue(now = new Date()) {
+    const minimumDate = new Date(now);
+    minimumDate.setDate(minimumDate.getDate() + 1);
+    minimumDate.setHours(0, 0, 0, 0);
+    return toDateTimeLocalValue(minimumDate);
+}
+
+export function isOpportunityExpirationValueAllowed(value, now = new Date()) {
+    if (!value) return true;
+
+    const expirationDate = new Date(value);
+    if (Number.isNaN(expirationDate.getTime())) return false;
+
+    if (
+        expirationDate.getHours() === 0
+        && expirationDate.getMinutes() === 0
+        && expirationDate.getSeconds() === 0
+        && expirationDate.getMilliseconds() === 0
+    ) {
+        expirationDate.setHours(23, 59, 59, 999);
+    }
+
+    return expirationDate.getTime() >= now.getTime() + DAY_IN_MS;
+}
+
 export function includesText(haystack, needle) {
     return (haystack || '').toLowerCase().includes((needle || '').toLowerCase());
 }
