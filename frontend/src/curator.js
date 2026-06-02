@@ -404,6 +404,16 @@ export function createCuratorController({
     async function handleCuratorOpportunityAiReview() {
         if (!state.pendingCuratorOpportunityId) return;
 
+        const payload = {
+            opportunity_id: state.pendingCuratorOpportunityId,
+            title: normalizeText(el('curatorOpportunityTitle').value),
+            type: el('curatorOpportunityType').value,
+            work_format: el('curatorOpportunityWorkFormat').value,
+            location: normalizeText(el('curatorOpportunityLocation').value),
+            salary_range: normalizeText(el('curatorOpportunitySalary').value),
+            description: normalizeText(el('curatorOpportunityDescription').value),
+            is_active: el('curatorOpportunityActive').checked,
+        };
         const button = el('curatorOpportunityAiReviewBtn');
         button.disabled = true;
         button.textContent = 'AI проверяет...';
@@ -413,7 +423,7 @@ export function createCuratorController({
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ opportunity_id: state.pendingCuratorOpportunityId }),
+            body: JSON.stringify(payload),
         });
 
         button.disabled = false;

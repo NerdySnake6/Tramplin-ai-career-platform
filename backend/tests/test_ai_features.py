@@ -168,7 +168,7 @@ def test_invalid_ai_json_returns_bad_gateway(client, monkeypatch):
 
 
 def test_curator_can_request_moderation_review(client, db_session, monkeypatch):
-    """Проверяет AI-подсказку для ручной модерации карточки."""
+    """Проверяет AI-подсказку для ручной модерации текущего состояния формы."""
     enable_ai(monkeypatch)
     curator = create_service_user(db_session, email="curator-ai@example.com", role="curator")
     employer = create_service_user(db_session, email="employer-for-review@example.com", role="employer")
@@ -185,17 +185,56 @@ def test_curator_can_request_moderation_review(client, db_session, monkeypatch):
     db_session.add(opportunity)
     db_session.commit()
 
-    monkeypatch.setattr(
-        ai_router.ai_service,
-        "call_chat_json",
-        lambda *_args, **_kwargs: {
+    def fake_moderation_chat_json(messages, **_kwargs):
+        assert "Описание после несохраненной правки куратора" in messages[-1]["content"]
+        assert "Статус публикации: неактивна" in messages[-1]["content"]
+        return {
             "risk_level": "medium",
             "reasons": ["Не указано вознаграждение"],
             "checklist": ["Проверить юридическое лицо"],
             "recommended_action": "Запросить детали условий перед публикацией.",
+        }
+
+    monkeypatch.setattr(ai_router.ai_service, "call_chat_json", fake_moderation_chat_json)
+    headers = login_existing_user(client, email=curator.email)
+
+    response = client.post(
+        "/ai/moderation-review",
+        headers=headers,
+        json={
+            "opportunity_id": opportunity.id,
+            "title": "Стажировка после правки",
+            "type": "internship",
+            "work_format": "remote",
+            "location": "Москва",
+            "salary_range": None,
+            "description": "Описание после несохраненной правки куратора",
+            "is_active": False,
         },
     )
-    headers = login_existing_user(client, email=curator.email)
+
+    assert response.status_code == 200
+    assert response.json()["risk_level"] == "medium"
+    db_session.refresh(opportunity)
+    assert opportunity.is_active is True
+
+
+def test_employer_cannot_request_moderation_review(client, db_session, monkeypatch):
+    """Проверяет, что работодатель не может запускать AI-проверку куратора."""
+    enable_ai(monkeypatch)
+    employer = create_service_user(db_session, email="blocked-review-employer@example.com", role="employer")
+    opportunity = models.Opportunity(
+        employer_id=employer.id,
+        title="Backend стажировка",
+        description="Практика с наставником и понятными задачами.",
+        type="internship",
+        work_format="hybrid",
+        location="Москва",
+        expires_at=models.utc_now_naive() + timedelta(days=14),
+    )
+    db_session.add(opportunity)
+    db_session.commit()
+    headers = login_existing_user(client, email=employer.email)
 
     response = client.post(
         "/ai/moderation-review",
@@ -203,8 +242,7 @@ def test_curator_can_request_moderation_review(client, db_session, monkeypatch):
         json={"opportunity_id": opportunity.id},
     )
 
-    assert response.status_code == 200
-    assert response.json()["risk_level"] == "medium"
+    assert response.status_code == 403
 
 
 def test_applicant_can_generate_cover_letter(client, db_session, monkeypatch):

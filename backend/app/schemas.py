@@ -390,6 +390,13 @@ class AIModerationReviewRequest(BaseModel):
     """Запрос AI-проверки карточки для куратора."""
 
     opportunity_id: int
+    title: Optional[str] = Field(default=None, max_length=200)
+    type: Optional[Literal["internship", "job", "mentorship", "event"]] = None
+    work_format: Optional[Literal["office", "hybrid", "remote"]] = None
+    location: Optional[str] = Field(default=None, max_length=300)
+    salary_range: Optional[str] = Field(default=None, max_length=100)
+    description: Optional[str] = Field(default=None, max_length=3000)
+    is_active: Optional[bool] = None
 
 
 class AIModerationReviewResponse(BaseModel):

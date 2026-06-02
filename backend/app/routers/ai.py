@@ -108,6 +108,11 @@ def tag_catalog_text(tags: Iterable[models.Tag]) -> str:
     return "\n".join(f"- {tag.name} ({tag.category})" for tag in tags) or "-"
 
 
+def snapshot_value(value: object, fallback: object) -> object:
+    """Возвращает значение из формы куратора или сохраненное значение карточки."""
+    return fallback if value is None else value
+
+
 def match_suggested_tags(suggested_names: list[str], tags: list[models.Tag]) -> list[schemas.AITagSuggestion]:
     """Сопоставляет предложенные моделью названия с существующими тегами."""
     by_name = {tag.name.casefold(): tag for tag in tags}
@@ -151,11 +156,12 @@ def opportunity_prompt(payload: schemas.AIOpportunityAssistRequest, tags: list[m
     ]
 
 
-def moderation_prompt(opportunity: models.Opportunity) -> list[dict[str, str]]:
+def moderation_prompt(opportunity: models.Opportunity, payload: schemas.AIModerationReviewRequest) -> list[dict[str, str]]:
     """Создает prompt для AI-проверки карточки куратором."""
     tags = ", ".join(tag.name for tag in opportunity.tags) or "-"
     employer_profile = opportunity.employer.employer_profile if opportunity.employer else None
     company_name = employer_profile.company_name if employer_profile else opportunity.employer_name
+    is_active = snapshot_value(payload.is_active, opportunity.is_active)
     return [
         {
             "role": "system",
@@ -169,13 +175,14 @@ def moderation_prompt(opportunity: models.Opportunity) -> list[dict[str, str]]:
             "role": "user",
             "content": (
                 f"Компания: {text_or_dash(company_name)}\n"
-                f"Название: {opportunity.title}\n"
-                f"Тип: {opportunity.type}\n"
-                f"Формат: {opportunity.work_format}\n"
-                f"Локация: {opportunity.location}\n"
-                f"Зарплата: {text_or_dash(opportunity.salary_range)}\n"
+                f"Название: {text_or_dash(snapshot_value(payload.title, opportunity.title))}\n"
+                f"Тип: {text_or_dash(snapshot_value(payload.type, opportunity.type))}\n"
+                f"Формат: {text_or_dash(snapshot_value(payload.work_format, opportunity.work_format))}\n"
+                f"Локация: {text_or_dash(snapshot_value(payload.location, opportunity.location))}\n"
+                f"Зарплата: {text_or_dash(snapshot_value(payload.salary_range, opportunity.salary_range))}\n"
+                f"Статус публикации: {'активна' if is_active else 'неактивна'}\n"
                 f"Теги: {tags}\n"
-                f"Описание: {opportunity.description}\n\n"
+                f"Описание: {text_or_dash(snapshot_value(payload.description, opportunity.description))}\n\n"
                 "Верни JSON с ключами: risk_level (low|medium|high), reasons (массив), checklist (массив), "
                 "recommended_action (строка)."
             ),
@@ -283,7 +290,7 @@ def review_moderation(
 
     try:
         raw = ai_service.call_chat_json(
-            moderation_prompt(opportunity),
+            moderation_prompt(opportunity, payload),
             response_schema=MODERATION_REVIEW_SCHEMA,
             schema_name="moderation_review",
         )
