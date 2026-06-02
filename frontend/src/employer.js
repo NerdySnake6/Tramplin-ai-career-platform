@@ -283,6 +283,7 @@ export function createEmployerController({
         el('employerOpportunityEventDate').value = '';
         el('employerOpportunityDescription').value = '';
         el('employerOpportunityActive').checked = true;
+        renderEmployerOpportunityAiResult(null);
         renderTagChoices('employerOpportunityTagOptions', []);
         syncEmployerOpportunityFieldHints();
         refreshFieldCounters();
@@ -319,6 +320,7 @@ export function createEmployerController({
         el('employerOpportunityEventDate').value = toDateTimeLocalValue(opportunity.event_date);
         el('employerOpportunityDescription').value = opportunity.description || '';
         el('employerOpportunityActive').checked = Boolean(opportunity.is_active);
+        renderEmployerOpportunityAiResult(null);
         renderTagChoices(
             'employerOpportunityTagOptions',
             Array.isArray(opportunity.tags) ? opportunity.tags.map((tag) => tag.id) : []
@@ -367,6 +369,67 @@ export function createEmployerController({
             is_active: el('employerOpportunityActive').checked,
             tag_ids: selectedTagIdsFromContainer('employerOpportunityTagOptions'),
         };
+    }
+
+    function renderEmployerOpportunityAiResult(result) {
+        const container = el('employerOpportunityAiResult');
+        if (!container) return;
+        container.innerHTML = '';
+        container.classList.toggle('d-none', !result);
+        if (!result) return;
+
+        const panel = createEl('div', 'ai-helper-result');
+        if (result.summary) {
+            panel.appendChild(createEl('div', 'fw-semibold mb-1', result.summary));
+        }
+        if (Array.isArray(result.suggested_tags) && result.suggested_tags.length) {
+            panel.appendChild(
+                createEl('div', 'text-muted', `Подобраны теги: ${result.suggested_tags.map((tag) => `#${tag.name}`).join(', ')}`)
+            );
+        }
+        if (Array.isArray(result.warnings) && result.warnings.length) {
+            const list = createEl('ul', 'mt-2');
+            result.warnings.forEach((warning) => {
+                list.appendChild(createEl('li', '', warning));
+            });
+            panel.appendChild(list);
+        }
+        container.appendChild(panel);
+    }
+
+    async function handleEmployerOpportunityAiAssist() {
+        const payload = buildEmployerOpportunityPayload();
+        const button = el('employerOpportunityAiAssistBtn');
+        button.disabled = true;
+        button.textContent = 'AI думает...';
+
+        const response = await apiFetch('/ai/opportunity-assist', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(payload),
+        });
+
+        button.disabled = false;
+        button.textContent = 'AI-помощник';
+
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({ detail: 'AI-помощник временно недоступен.' }));
+            showNotice('danger', typeof error.detail === 'string' ? error.detail : 'AI-помощник временно недоступен.');
+            return;
+        }
+
+        const result = await response.json();
+        if (result.description) {
+            el('employerOpportunityDescription').value = result.description;
+        }
+        if (Array.isArray(result.suggested_tags) && result.suggested_tags.length) {
+            renderTagChoices('employerOpportunityTagOptions', result.suggested_tags.map((tag) => tag.id));
+        }
+        renderEmployerOpportunityAiResult(result);
+        refreshFieldCounters();
+        showNotice('success', 'AI подготовил черновик карточки. Проверь и сохрани изменения.');
     }
 
     async function saveEmployerOpportunity({ id = null, payload, successMessage }) {
@@ -467,5 +530,6 @@ export function createEmployerController({
         openEmployerOpportunityModal,
         syncEmployerOpportunityFieldHints,
         handleEmployerOpportunitySubmit,
+        handleEmployerOpportunityAiAssist,
     };
 }

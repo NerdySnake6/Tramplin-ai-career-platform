@@ -337,3 +337,79 @@ class ApplicantProfileVisibilityOut(BaseModel):
 class LoginRequest(BaseModel):
     username: str = Field(max_length=255)
     password: str = Field(max_length=255)
+
+
+class AIStatusOut(BaseModel):
+    """Состояние AI-интеграции без раскрытия секретов."""
+
+    enabled: bool
+    configured: bool
+    ready: bool
+    model: str
+    base_url: str
+
+
+class AITagSuggestion(BaseModel):
+    """Тег, предложенный AI из существующего справочника."""
+
+    id: int
+    name: str
+    category: str
+
+
+class AIOpportunityAssistRequest(BaseModel):
+    """Данные карточки, по которым AI готовит описание и теги."""
+
+    title: str = Field(default="", max_length=200)
+    description: str = Field(default="", max_length=3000)
+    type: Literal["internship", "job", "mentorship", "event"]
+    work_format: Literal["office", "hybrid", "remote"]
+    location: str = Field(default="", max_length=300)
+    salary_range: Optional[str] = Field(default=None, max_length=100)
+
+
+class AIOpportunityAssistRawResponse(BaseModel):
+    """Сырой структурированный ответ модели для карточки возможности."""
+
+    description: str = Field(min_length=20, max_length=3000)
+    summary: str = Field(default="", max_length=300)
+    suggested_tag_names: list[str] = Field(default_factory=list, max_length=12)
+    warnings: list[str] = Field(default_factory=list, max_length=8)
+
+
+class AIOpportunityAssistResponse(BaseModel):
+    """Ответ AI-помощника работодателя после сопоставления тегов."""
+
+    description: str
+    summary: str
+    suggested_tags: list[AITagSuggestion] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
+
+
+class AIModerationReviewRequest(BaseModel):
+    """Запрос AI-проверки карточки для куратора."""
+
+    opportunity_id: int
+
+
+class AIModerationReviewResponse(BaseModel):
+    """AI-подсказка для ручной модерации карточки."""
+
+    risk_level: Literal["low", "medium", "high"]
+    reasons: list[str] = Field(default_factory=list, max_length=8)
+    checklist: list[str] = Field(default_factory=list, max_length=8)
+    recommended_action: str = Field(default="", max_length=500)
+
+
+class AICoverLetterRequest(BaseModel):
+    """Запрос генерации сопроводительного письма."""
+
+    opportunity_id: int
+
+
+class AICoverLetterResponse(BaseModel):
+    """AI-черновик сопроводительного письма."""
+
+    cover_letter: str = Field(min_length=20, max_length=2000)
+    fit_reasons: list[str] = Field(default_factory=list, max_length=5)
+    gaps: list[str] = Field(default_factory=list, max_length=3)

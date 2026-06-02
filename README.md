@@ -214,6 +214,11 @@ SMTP_FROM_NAME=Tramplin
 BACKEND_PUBLIC_URL=https://tramplin.site/api
 FRONTEND_PUBLIC_URL=https://tramplin.site
 EMAIL_VERIFICATION_TTL_MINUTES=60
+AI_FEATURES_ENABLED=false
+POLZA_API_KEY=ключ_API_из_Polza
+POLZA_API_BASE_URL=https://polza.ai/api/v1
+POLZA_MODEL=openai/gpt-4o-mini
+AI_REQUEST_TIMEOUT_SECONDS=20
 FRONTEND_PORT=80
 FRONTEND_HTTPS_PORT=443
 ```
@@ -241,7 +246,51 @@ TXT    _dmarc             v=DMARC1; p=none; rua=mailto:rua@dmarc.brevo.com
 
 Если письма не отправляются, проверь `docker compose logs -f backend`, правильность `SMTP_USERNAME`/`SMTP_PASSWORD`, статус sender и аутентификацию домена в Brevo.
 
-### 3. Запустить проект
+### 3. Включить AI-функции через Polza.ai
+
+AI-функции работают через backend, поэтому API-ключ не попадает во frontend и не виден пользователю в браузере.
+Если ключ не задан или `AI_FEATURES_ENABLED=false`, сайт продолжает работать без AI-подсказок.
+
+1. В Polza.ai создай API key для OpenAI-compatible API.
+2. В `.env` на VPS укажи:
+
+```env
+AI_FEATURES_ENABLED=true
+POLZA_API_KEY=твой_ключ_Polza
+POLZA_API_BASE_URL=https://polza.ai/api/v1
+POLZA_MODEL=openai/gpt-4o-mini
+AI_REQUEST_TIMEOUT_SECONDS=20
+```
+
+3. Перезапусти backend, чтобы он перечитал `.env`:
+
+```bash
+cd ~/tramplin
+docker-compose stop backend
+docker-compose rm -f backend
+docker-compose up -d backend
+```
+
+4. Проверь статус интеграции:
+
+```bash
+curl https://tramplin.site/api/ai/status
+```
+
+В ответе `ready` должен быть `true`, если AI включен и ключ задан.
+
+Модель выбирается не при создании API-ключа, а в каждом запросе через `POLZA_MODEL`.
+Используй ID из каталога моделей Polza.ai в формате `provider/model`, например `openai/gpt-4o-mini`.
+
+AI-сценарии для демонстрации:
+
+- работодатель нажимает `AI-помощник` в форме вакансии/стажировки и получает улучшенное описание, теги и предупреждения о недостающих данных;
+- куратор нажимает `AI-проверка` в карточке возможности и получает риск-уровень, причины и чеклист ручной модерации;
+- соискатель нажимает `Сгенерировать с AI` в форме отклика и получает черновик сопроводительного письма.
+
+Во всех сценариях AI только предлагает черновик. Финальное решение остается за пользователем или куратором.
+
+### 4. Запустить проект
 
 ```bash
 docker compose up -d --build
@@ -253,7 +302,7 @@ docker compose up -d --build
 - backend будет доступен внутри Docker-сети как `backend:8000`
 - Swagger и OpenAPI в production закрыты nginx-конфигом
 
-### 4. Проверить состояние контейнеров
+### 5. Проверить состояние контейнеров
 
 ```bash
 docker compose ps

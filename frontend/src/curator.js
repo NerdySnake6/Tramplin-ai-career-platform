@@ -358,8 +358,76 @@ export function createCuratorController({
         el('curatorOpportunityExpiresAt').value = toDateTimeLocalValue(opportunity.expires_at);
         el('curatorOpportunityDescription').value = opportunity.description || '';
         el('curatorOpportunityActive').checked = Boolean(opportunity.is_active);
+        renderCuratorOpportunityAiReview(null);
         refreshFieldCounters();
         getCuratorOpportunityModal().show();
+    }
+
+    function renderCuratorOpportunityAiReview(result) {
+        const container = el('curatorOpportunityAiReviewResult');
+        if (!container) return;
+        container.innerHTML = '';
+        container.classList.toggle('d-none', !result);
+        if (!result) return;
+
+        const riskLabels = {
+            low: 'Низкий риск',
+            medium: 'Средний риск',
+            high: 'Высокий риск',
+        };
+        const riskClasses = {
+            low: 'text-success',
+            medium: 'text-warning',
+            high: 'text-danger',
+        };
+        const panel = createEl('div', 'ai-helper-result');
+        panel.appendChild(
+            createEl('div', `fw-semibold mb-1 ${riskClasses[result.risk_level] || ''}`, riskLabels[result.risk_level] || result.risk_level)
+        );
+        if (Array.isArray(result.reasons) && result.reasons.length) {
+            panel.appendChild(createEl('div', 'text-muted', `Причины: ${result.reasons.join('; ')}`));
+        }
+        if (Array.isArray(result.checklist) && result.checklist.length) {
+            panel.appendChild(createEl('div', 'fw-semibold mt-2', 'Проверить вручную:'));
+            const checklist = createEl('ul', '');
+            result.checklist.forEach((item) => {
+                checklist.appendChild(createEl('li', '', item));
+            });
+            panel.appendChild(checklist);
+        }
+        if (result.recommended_action) {
+            panel.appendChild(createEl('div', 'mt-2', `Рекомендация: ${result.recommended_action}`));
+        }
+        container.appendChild(panel);
+    }
+
+    async function handleCuratorOpportunityAiReview() {
+        if (!state.pendingCuratorOpportunityId) return;
+
+        const button = el('curatorOpportunityAiReviewBtn');
+        button.disabled = true;
+        button.textContent = 'AI проверяет...';
+
+        const response = await apiFetch('/ai/moderation-review', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ opportunity_id: state.pendingCuratorOpportunityId }),
+        });
+
+        button.disabled = false;
+        button.textContent = 'AI-проверка';
+
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({ detail: 'AI-проверка временно недоступна.' }));
+            showNotice('danger', typeof error.detail === 'string' ? error.detail : 'AI-проверка временно недоступна.');
+            return;
+        }
+
+        const result = await response.json();
+        renderCuratorOpportunityAiReview(result);
+        showNotice('success', 'AI подготовил подсказку для ручной модерации.');
     }
 
     async function handleCuratorUserSubmit(event) {
@@ -442,5 +510,6 @@ export function createCuratorController({
         handleCuratorUserSubmit,
         handleCuratorCreateSubmit,
         handleCuratorOpportunitySubmit,
+        handleCuratorOpportunityAiReview,
     };
 }

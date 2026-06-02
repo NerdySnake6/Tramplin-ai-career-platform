@@ -94,6 +94,7 @@ let handleRecommendationSubmit;
 let openApplicantProfileModal;
 let openApplyModal;
 let handleApplySubmit;
+let handleCoverLetterAiGenerate;
 let renderEmployerResponses;
 let renderEmployerOpportunities;
 let applyEmployerResponseFilters;
@@ -103,12 +104,14 @@ let resetEmployerOpportunityFilters;
 let openEmployerOpportunityModal;
 let syncEmployerOpportunityFieldHints;
 let handleEmployerOpportunitySubmit;
+let handleEmployerOpportunityAiAssist;
 let renderCuratorSection;
 let openCuratorUserModal;
 let openCuratorOpportunityModal;
 let handleCuratorUserSubmit;
 let handleCuratorCreateSubmit;
 let handleCuratorOpportunitySubmit;
+let handleCuratorOpportunityAiReview;
 
 const mapController = createMapController({
     apiKey: YANDEX_API_KEY,
@@ -386,6 +389,7 @@ handleRecommendationSubmit = applicantController.handleRecommendationSubmit;
 openApplicantProfileModal = applicantController.openApplicantProfileModal;
 openApplyModal = applicantController.openApplyModal;
 handleApplySubmit = applicantController.handleApplySubmit;
+handleCoverLetterAiGenerate = applicantController.handleCoverLetterAiGenerate;
 
 const employerController = createEmployerController({
     state,
@@ -407,6 +411,7 @@ resetEmployerOpportunityFilters = employerController.resetEmployerOpportunityFil
 openEmployerOpportunityModal = employerController.openEmployerOpportunityModal;
 syncEmployerOpportunityFieldHints = employerController.syncEmployerOpportunityFieldHints;
 handleEmployerOpportunitySubmit = employerController.handleEmployerOpportunitySubmit;
+handleEmployerOpportunityAiAssist = employerController.handleEmployerOpportunityAiAssist;
 
 const curatorController = createCuratorController({
     state,
@@ -424,6 +429,7 @@ openCuratorOpportunityModal = curatorController.openCuratorOpportunityModal;
 handleCuratorUserSubmit = curatorController.handleCuratorUserSubmit;
 handleCuratorCreateSubmit = curatorController.handleCuratorCreateSubmit;
 handleCuratorOpportunitySubmit = curatorController.handleCuratorOpportunitySubmit;
+handleCuratorOpportunityAiReview = curatorController.handleCuratorOpportunityAiReview;
 
 function visibleViews() {
     const views = ['home'];
@@ -1656,13 +1662,22 @@ function bindEvents() {
     el('registerForm').addEventListener('submit', handleRegisterSubmit);
     el('profileForm').addEventListener('submit', handleProfileSubmit);
     el('applyForm').addEventListener('submit', handleApplySubmit);
+    el('generateCoverLetterAiBtn').addEventListener('click', () => {
+        void handleCoverLetterAiGenerate();
+    });
     el('recommendForm').addEventListener('submit', handleRecommendationSubmit);
     el('tagForm').addEventListener('submit', handleTagSubmit);
     el('curatorTagForm').addEventListener('submit', handleCuratorTagSubmit);
     el('employerOpportunityForm').addEventListener('submit', handleEmployerOpportunitySubmit);
+    el('employerOpportunityAiAssistBtn').addEventListener('click', () => {
+        void handleEmployerOpportunityAiAssist();
+    });
     el('curatorUserForm').addEventListener('submit', handleCuratorUserSubmit);
     el('curatorCreateForm').addEventListener('submit', handleCuratorCreateSubmit);
     el('curatorOpportunityForm').addEventListener('submit', handleCuratorOpportunitySubmit);
+    el('curatorOpportunityAiReviewBtn').addEventListener('click', () => {
+        void handleCuratorOpportunityAiReview();
+    });
     el('openCuratorCreateBtn').addEventListener('click', () => {
         el('curatorCreateForm').reset();
         curatorCreateModal.show();

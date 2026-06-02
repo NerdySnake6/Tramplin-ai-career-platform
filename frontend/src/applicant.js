@@ -407,8 +407,62 @@ export function createApplicantController({
         state.pendingApplyId = opportunityId;
         el('applyOpportunityMeta').textContent = `${opportunity.title} | ${opportunity.location}`;
         el('coverLetter').value = '';
+        renderCoverLetterAiResult(null);
         refreshFieldCounters();
         getApplyModal().show();
+    }
+
+    function renderCoverLetterAiResult(result) {
+        const container = el('coverLetterAiResult');
+        if (!container) return;
+        container.innerHTML = '';
+        container.classList.toggle('d-none', !result);
+        if (!result) return;
+
+        const panel = createEl('div', 'ai-helper-result');
+        if (Array.isArray(result.fit_reasons) && result.fit_reasons.length) {
+            panel.appendChild(createEl('div', 'fw-semibold mb-1', 'Почему подходит:'));
+            const reasons = createEl('ul', '');
+            result.fit_reasons.forEach((reason) => {
+                reasons.appendChild(createEl('li', '', reason));
+            });
+            panel.appendChild(reasons);
+        }
+        if (Array.isArray(result.gaps) && result.gaps.length) {
+            panel.appendChild(createEl('div', 'text-muted mt-2', `Что стоит уточнить: ${result.gaps.join('; ')}`));
+        }
+        container.appendChild(panel);
+    }
+
+    async function handleCoverLetterAiGenerate() {
+        if (!state.pendingApplyId) return;
+
+        const button = el('generateCoverLetterAiBtn');
+        button.disabled = true;
+        button.textContent = 'AI пишет...';
+
+        const response = await apiFetch('/ai/cover-letter', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ opportunity_id: state.pendingApplyId }),
+        });
+
+        button.disabled = false;
+        button.textContent = 'Сгенерировать с AI';
+
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({ detail: 'AI-помощник временно недоступен.' }));
+            showNotice('danger', typeof error.detail === 'string' ? error.detail : 'AI-помощник временно недоступен.');
+            return;
+        }
+
+        const result = await response.json();
+        el('coverLetter').value = result.cover_letter || '';
+        renderCoverLetterAiResult(result);
+        refreshFieldCounters();
+        showNotice('success', 'AI подготовил черновик письма. Проверь текст перед отправкой.');
     }
 
     async function handleApplySubmit(event) {
@@ -457,5 +511,6 @@ export function createApplicantController({
         openApplicantProfileModal,
         openApplyModal,
         handleApplySubmit,
+        handleCoverLetterAiGenerate,
     };
 }

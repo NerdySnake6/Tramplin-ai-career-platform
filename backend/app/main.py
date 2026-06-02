@@ -29,6 +29,7 @@ load_local_env()
 
 from app.database import init_db
 from app.routers import (
+    ai,
     auth,
     contacts,
     curator,
@@ -56,6 +57,7 @@ app = FastAPI(
 )
 
 app.include_router(auth.router)
+app.include_router(ai.router)
 app.include_router(contacts.router)
 app.include_router(curator.router)
 app.include_router(map.router)

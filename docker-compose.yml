@@ -20,6 +20,11 @@ services:
       BACKEND_PUBLIC_URL: ${BACKEND_PUBLIC_URL:-https://tramplin.site/api}
       FRONTEND_PUBLIC_URL: ${FRONTEND_PUBLIC_URL:-https://tramplin.site}
       EMAIL_VERIFICATION_TTL_MINUTES: ${EMAIL_VERIFICATION_TTL_MINUTES:-60}
+      AI_FEATURES_ENABLED: ${AI_FEATURES_ENABLED:-false}
+      POLZA_API_KEY: ${POLZA_API_KEY:-}
+      POLZA_API_BASE_URL: ${POLZA_API_BASE_URL:-https://polza.ai/api/v1}
+      POLZA_MODEL: ${POLZA_MODEL:-openai/gpt-4o-mini}
+      AI_REQUEST_TIMEOUT_SECONDS: ${AI_REQUEST_TIMEOUT_SECONDS:-20}
     volumes:
       - tramplin_backend_data:/data
     expose:
