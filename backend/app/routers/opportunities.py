@@ -36,6 +36,8 @@ def should_geocode(location: Optional[str], work_format: Optional[str]) -> bool:
     """Определяет, нужно ли выполнять геокодирование локации."""
     if not location:
         return False
+    if work_format == "remote":
+        return False
     loc_lower = location.lower()
     if "удален" in loc_lower or "remote" in loc_lower or "онлайн" in loc_lower or "online" in loc_lower:
         return False
@@ -263,17 +265,22 @@ def update_opportunity(
     if "expires_at" in update_data:
         update_data["expires_at"] = normalize_validated_expires_at(update_data["expires_at"])
 
-    location = update_data.get("location", opp.location)
-    work_format = update_data.get("work_format", opp.work_format)
-    lat = update_data.get("lat", opp.lat)
-    lng = update_data.get("lng", opp.lng)
+    old_location = opp.location
+    old_work_format = opp.work_format
 
-    if (
-        "location" in update_data
-        or "work_format" in update_data
-        or ("lat" in update_data and "lng" in update_data)
-    ):
-        lat, lng = resolve_coordinates(location, work_format, lat, lng)
+    location_changed = ("location" in update_data and update_data["location"] != old_location)
+    work_format_changed = ("work_format" in update_data and update_data["work_format"] != old_work_format)
+
+    active_location = update_data.get("location", old_location)
+    active_work_format = update_data.get("work_format", old_work_format)
+
+    if active_work_format == "remote":
+        update_data["lat"] = None
+        update_data["lng"] = None
+    elif location_changed or work_format_changed or opp.lat is None or opp.lng is None or "lat" in update_data or "lng" in update_data:
+        lat = update_data.get("lat")
+        lng = update_data.get("lng")
+        lat, lng = resolve_coordinates(active_location, active_work_format, lat, lng)
         update_data["lat"] = lat
         update_data["lng"] = lng
 
