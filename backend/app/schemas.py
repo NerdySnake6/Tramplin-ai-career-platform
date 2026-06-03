@@ -10,7 +10,7 @@ from app.salary import has_unreasonable_salary_number, parse_salary_range
 def validate_salary_range_text(value: Optional[str]) -> Optional[str]:
     """Проверяет, что текстовое поле зарплаты не выглядит как случайная числовая строка."""
     if has_unreasonable_salary_number(value):
-        raise ValueError("Укажи реалистичное вознаграждение: например, 80 000 рублей или 80 000 - 120 000 рублей.")
+        raise ValueError("Укажи реалистичное вознаграждение в диапазоне от 0 до 3 000 000 рублей: например, 80 000 рублей или 80 000 - 120 000 рублей.")
     return value
 
 class UserBase(BaseModel):

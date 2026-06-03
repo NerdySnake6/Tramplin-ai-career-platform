@@ -191,6 +191,7 @@ def test_opportunity_assist_warns_about_unreasonable_salary(client, monkeypatch)
     monkeypatch.setattr(ai_router.ai_service, "call_chat_json_async", fake_chat_json)
     headers = register_and_login(client, email="salary-ai-employer@example.com", role="employer")
 
+    # 1. Test massive value
     response = client.post(
         "/ai/opportunity-assist",
         headers=headers,
@@ -203,11 +204,44 @@ def test_opportunity_assist_warns_about_unreasonable_salary(client, monkeypatch)
             "salary_range": "123333222221112233333222112233321321312",
         },
     )
-
     assert response.status_code == 200
     payload = response.json()
     assert "Проверь поле вознаграждения: значение выглядит некорректным." in payload["warnings"]
     assert "123333" not in payload["description"]
+
+    # 2. Test negative value
+    response = client.post(
+        "/ai/opportunity-assist",
+        headers=headers,
+        json={
+            "title": "Junior developer",
+            "description": "Помощь команде с задачами разработки.",
+            "type": "job",
+            "work_format": "hybrid",
+            "location": "Москва",
+            "salary_range": "-100",
+        },
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert "Проверь поле вознаграждения: значение выглядит некорректным." in payload["warnings"]
+
+    # 3. Test value > 3M
+    response = client.post(
+        "/ai/opportunity-assist",
+        headers=headers,
+        json={
+            "title": "Junior developer",
+            "description": "Помощь команде с задачами разработки.",
+            "type": "job",
+            "work_format": "hybrid",
+            "location": "Москва",
+            "salary_range": "3 500 000",
+        },
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert "Проверь поле вознаграждения: значение выглядит некорректным." in payload["warnings"]
 
 
 def test_applicant_cannot_use_opportunity_assist(client, monkeypatch):

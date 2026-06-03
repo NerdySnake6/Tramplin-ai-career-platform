@@ -14,7 +14,7 @@ UNPAID_MARKERS = (
     "волонтер",
     "без вознаграждения",
 )
-MAX_REASONABLE_REWARD = 10_000_000
+MAX_REASONABLE_REWARD = 3_000_000
 
 
 @dataclass(frozen=True)
@@ -52,11 +52,34 @@ def has_unreasonable_salary_number(value: str | None) -> bool:
     text = (value or "").strip()
     if not text:
         return False
-    numbers_as_text = [item.replace(" ", "") for item in re.findall(r"\d[\d\s]*", text)]
+
+    # Normalize minus signs
+    normalized_text = text.replace("—", "-").replace("−", "-")
+
+    # Replace ranges "digit - digit" with "digit to digit" to avoid treating range dashes as negative signs
+    while True:
+        next_text = re.sub(r"(\d)\s*-\s*(\d)", r"\1 to \2", normalized_text)
+        if next_text == normalized_text:
+            break
+        normalized_text = next_text
+
+    # If there is any remaining minus sign followed by a digit, it's a negative number
+    if re.search(r"-\s*\d", normalized_text):
+        return True
+
+    numbers_as_text = [item.replace(" ", "") for item in re.findall(r"\d[\d\s]*", normalized_text)]
     if any(len(item) > 9 for item in numbers_as_text):
         return True
-    info = parse_salary_range(text)
-    return bool(info.max_value is not None and info.max_value > MAX_REASONABLE_REWARD)
+
+    for item in numbers_as_text:
+        try:
+            val = int(item)
+            if val > MAX_REASONABLE_REWARD or val < 0:
+                return True
+        except ValueError:
+            return True
+
+    return False
 
 
 def matches_salary_filter(value: str | None, salary_filter: str | None) -> bool:

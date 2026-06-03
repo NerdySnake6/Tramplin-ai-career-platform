@@ -748,6 +748,7 @@ def test_employer_cannot_create_opportunity_with_unreasonable_salary(client, db_
         password="supersecret",
     )
 
+    # 1. Reject huge number
     response = client.post(
         "/opportunities/",
         headers=auth_headers(token),
@@ -761,9 +762,58 @@ def test_employer_cannot_create_opportunity_with_unreasonable_salary(client, db_
             "tag_ids": [],
         },
     )
-
     assert response.status_code == 422
     assert "реалистичное вознаграждение" in response.text
+
+    # 2. Reject negative number
+    response = client.post(
+        "/opportunities/",
+        headers=auth_headers(token),
+        json={
+            "title": "Junior Backend Developer",
+            "description": "Работа с Python и FastAPI под руководством опытного наставника.",
+            "type": "job",
+            "work_format": "hybrid",
+            "location": "Москва",
+            "salary_range": "-100",
+            "tag_ids": [],
+        },
+    )
+    assert response.status_code == 422
+    assert "реалистичное вознаграждение" in response.text
+
+    # 3. Reject salary > 3_000_000
+    response = client.post(
+        "/opportunities/",
+        headers=auth_headers(token),
+        json={
+            "title": "Junior Backend Developer",
+            "description": "Работа с Python и FastAPI под руководством опытного наставника.",
+            "type": "job",
+            "work_format": "hybrid",
+            "location": "Москва",
+            "salary_range": "3 000 001",
+            "tag_ids": [],
+        },
+    )
+    assert response.status_code == 422
+    assert "реалистичное вознаграждение" in response.text
+
+    # 4. Accept salary 3_000_000
+    response = client.post(
+        "/opportunities/",
+        headers=auth_headers(token),
+        json={
+            "title": "Junior Backend Developer 3M",
+            "description": "Работа с Python и FastAPI под руководством опытного наставника.",
+            "type": "job",
+            "work_format": "hybrid",
+            "location": "Москва",
+            "salary_range": "3 000 000",
+            "tag_ids": [],
+        },
+    )
+    assert response.status_code == 201
 
 
 def test_employer_can_manage_own_opportunities(client, db_session):
