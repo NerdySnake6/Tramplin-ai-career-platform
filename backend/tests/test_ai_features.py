@@ -193,6 +193,13 @@ def test_curator_can_request_moderation_review(client, db_session, monkeypatch):
             "reasons": ["Текст м��жет содержать мутные условия"],
             "checklist": ["Проверить юридическое лицо"],
             "recommended_action": "Запросить детали условий перед публикацией.",
+            "highlights": [
+                {
+                    "text": "Описание после несохраненной правки куратора",
+                    "level": "suspicious",
+                    "explanation": "Фрагмент требует ручной проверки.",
+                }
+            ],
         }
 
     monkeypatch.setattr(ai_router.ai_service, "call_chat_json", fake_moderation_chat_json)
@@ -218,6 +225,7 @@ def test_curator_can_request_moderation_review(client, db_session, monkeypatch):
     assert payload["risk_level"] == "medium"
     assert "�" not in str(payload)
     assert payload["reasons"] == ["Текст мжет содержать мутные условия"]
+    assert payload["highlights"][0]["level"] == "suspicious"
     db_session.refresh(opportunity)
     assert opportunity.is_active is True
 

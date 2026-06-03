@@ -399,6 +399,14 @@ class AIModerationReviewRequest(BaseModel):
     is_active: Optional[bool] = None
 
 
+class AIModerationHighlight(BaseModel):
+    """Фрагмент текста карточки с AI-оценкой риска."""
+
+    text: str = Field(min_length=1, max_length=300)
+    level: Literal["good", "suspicious", "danger"]
+    explanation: str = Field(default="", max_length=300)
+
+
 class AIModerationReviewResponse(BaseModel):
     """AI-подсказка для ручной модерации карточки."""
 
@@ -406,6 +414,7 @@ class AIModerationReviewResponse(BaseModel):
     reasons: list[str] = Field(default_factory=list, max_length=8)
     checklist: list[str] = Field(default_factory=list, max_length=8)
     recommended_action: str = Field(default="", max_length=500)
+    highlights: list[AIModerationHighlight] = Field(default_factory=list, max_length=10)
 
 
 class AICoverLetterRequest(BaseModel):

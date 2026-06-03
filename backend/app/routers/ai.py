@@ -39,10 +39,20 @@ OPPORTUNITY_ASSIST_SCHEMA = {
         },
     },
 }
+MODERATION_HIGHLIGHT_SCHEMA = {
+    "type": "object",
+    "additionalProperties": False,
+    "required": ["text", "level", "explanation"],
+    "properties": {
+        "text": {"type": "string"},
+        "level": {"type": "string", "enum": ["good", "suspicious", "danger"]},
+        "explanation": {"type": "string"},
+    },
+}
 MODERATION_REVIEW_SCHEMA = {
     "type": "object",
     "additionalProperties": False,
-    "required": ["risk_level", "reasons", "checklist", "recommended_action"],
+    "required": ["risk_level", "reasons", "checklist", "recommended_action", "highlights"],
     "properties": {
         "risk_level": {"type": "string", "enum": ["low", "medium", "high"]},
         "reasons": {
@@ -54,6 +64,10 @@ MODERATION_REVIEW_SCHEMA = {
             "items": {"type": "string"},
         },
         "recommended_action": {"type": "string"},
+        "highlights": {
+            "type": "array",
+            "items": MODERATION_HIGHLIGHT_SCHEMA,
+        },
     },
 }
 COVER_LETTER_SCHEMA = {
@@ -202,7 +216,11 @@ def moderation_prompt(opportunity: models.Opportunity, payload: schemas.AIModera
                 f"Теги: {tags}\n"
                 f"Описание: {text_or_dash(snapshot_value(payload.description, opportunity.description))}\n\n"
                 "Верни JSON с ключами: risk_level (low|medium|high), reasons (массив), checklist (массив), "
-                "recommended_action (строка)."
+                "recommended_action (строка), highlights (массив до 8 объектов). "
+                "Каждый объект highlights должен содержать text (точная короткая цитата из описания), "
+                "level (good|suspicious|danger) и explanation (почему фрагмент отмечен). "
+                "Используй good для прозрачных сильных условий, suspicious для неоднозначных формулировок, "
+                "danger для опасных условий вроде депозитов, неоплачиваемой работы на реальном проекте или отсутствия договора."
             ),
         },
     ]

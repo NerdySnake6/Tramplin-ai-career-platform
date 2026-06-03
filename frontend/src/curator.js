@@ -367,7 +367,92 @@ export function createCuratorController({
         getCuratorOpportunityModal().show();
     }
 
-    function renderCuratorOpportunityAiReview(result) {
+    function highlightLabel(level) {
+        if (level === 'good') return 'Хорошо';
+        if (level === 'suspicious') return 'Подозрительно';
+        if (level === 'danger') return 'Опасно';
+        return level;
+    }
+
+    function highlightClass(level) {
+        if (level === 'good') return 'ai-text-highlight-good';
+        if (level === 'suspicious') return 'ai-text-highlight-suspicious';
+        if (level === 'danger') return 'ai-text-highlight-danger';
+        return 'ai-text-highlight-suspicious';
+    }
+
+    function createHighlightedDescription(description, highlights) {
+        if (!description || !Array.isArray(highlights) || !highlights.length) return null;
+
+        const lowerDescription = description.toLowerCase();
+        const ranges = [];
+        highlights.forEach((highlight) => {
+            const text = (highlight.text || '').trim();
+            if (!text) return;
+
+            const start = lowerDescription.indexOf(text.toLowerCase());
+            if (start < 0) return;
+
+            ranges.push({
+                start,
+                end: start + text.length,
+                level: highlight.level,
+                explanation: highlight.explanation || highlightLabel(highlight.level),
+            });
+        });
+
+        const orderedRanges = [];
+        ranges
+            .sort((left, right) => left.start - right.start || right.end - left.end)
+            .forEach((range) => {
+                const previousRange = orderedRanges[orderedRanges.length - 1];
+                if (!previousRange || range.start >= previousRange.end) {
+                    orderedRanges.push(range);
+                }
+            });
+
+        if (!orderedRanges.length) return null;
+
+        const container = createEl('div', 'ai-highlighted-description');
+        let cursor = 0;
+        orderedRanges.forEach((range) => {
+            if (range.start > cursor) {
+                container.appendChild(document.createTextNode(description.slice(cursor, range.start)));
+            }
+
+            const marker = createEl('span', `ai-text-highlight ${highlightClass(range.level)}`, description.slice(range.start, range.end));
+            marker.title = range.explanation;
+            marker.setAttribute('aria-label', `${highlightLabel(range.level)}: ${range.explanation}`);
+            container.appendChild(marker);
+            cursor = range.end;
+        });
+
+        if (cursor < description.length) {
+            container.appendChild(document.createTextNode(description.slice(cursor)));
+        }
+
+        return container;
+    }
+
+    function appendModerationHighlights(panel, description, highlights) {
+        const highlightedDescription = createHighlightedDescription(description, highlights);
+        if (!highlightedDescription) return;
+
+        panel.appendChild(createEl('div', 'fw-semibold mt-3 mb-1', 'Подсветка описания:'));
+        const legend = createEl('div', 'ai-highlight-legend mb-2');
+        [
+            ['good', 'сильная формулировка'],
+            ['suspicious', 'требует проверки'],
+            ['danger', 'опасный фрагмент'],
+        ].forEach(([level, label]) => {
+            const item = createEl('span', `ai-highlight-legend-item ${highlightClass(level)}`, `${highlightLabel(level)} - ${label}`);
+            legend.appendChild(item);
+        });
+        panel.appendChild(legend);
+        panel.appendChild(highlightedDescription);
+    }
+
+    function renderCuratorOpportunityAiReview(result, description = '') {
         const container = el('curatorOpportunityAiReviewResult');
         if (!container) return;
         container.innerHTML = '';
@@ -391,6 +476,7 @@ export function createCuratorController({
         if (Array.isArray(result.reasons) && result.reasons.length) {
             panel.appendChild(createEl('div', 'text-muted', `Причины: ${result.reasons.join('; ')}`));
         }
+        appendModerationHighlights(panel, description, result.highlights);
         if (Array.isArray(result.checklist) && result.checklist.length) {
             panel.appendChild(createEl('div', 'fw-semibold mt-2', 'Проверить вручную:'));
             const checklist = createEl('ul', '');
@@ -440,7 +526,7 @@ export function createCuratorController({
         }
 
         const result = await response.json();
-        renderCuratorOpportunityAiReview(result);
+        renderCuratorOpportunityAiReview(result, payload.description || '');
         showNotice('success', 'AI подготовил подсказку для ручной модерации.');
     }
 

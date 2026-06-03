@@ -1677,6 +1677,60 @@ body {
     padding-left: 1.1rem;
 }
 
+.ai-highlight-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+}
+
+.ai-highlight-legend-item,
+.ai-text-highlight {
+    border-radius: 0.45rem;
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
+}
+
+.ai-highlight-legend-item {
+    display: inline-flex;
+    font-size: 0.76rem;
+    font-weight: 600;
+    line-height: 1.2;
+    padding: 0.2rem 0.45rem;
+}
+
+.ai-highlighted-description {
+    background: rgba(255, 255, 255, 0.64);
+    border: 1px solid rgba(13, 110, 253, 0.12);
+    border-radius: 0.75rem;
+    line-height: 1.7;
+    padding: 0.75rem;
+    white-space: pre-wrap;
+}
+
+.ai-text-highlight {
+    border: 1px solid transparent;
+    font-weight: 600;
+    padding: 0.08rem 0.22rem;
+}
+
+.ai-text-highlight-good {
+    background: rgba(25, 135, 84, 0.16);
+    border-color: rgba(25, 135, 84, 0.24);
+    color: #0f5132;
+}
+
+.ai-text-highlight-suspicious {
+    background: rgba(255, 193, 7, 0.24);
+    border-color: rgba(255, 193, 7, 0.32);
+    color: #664d03;
+}
+
+.ai-text-highlight-danger {
+    background: rgba(220, 53, 69, 0.16);
+    border-color: rgba(220, 53, 69, 0.26);
+    color: #842029;
+}
+
 .opportunity-manage-meta {
     color: #6c757d;
     font-size: 0.85rem;
