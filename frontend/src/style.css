@@ -1178,25 +1178,25 @@ body {
     border: 1px solid transparent;
 }
 
-/* Soft Pastel Theme for all three chips */
+/* Clean Unified Theme for all status chips to avoid color overload */
 .opportunity-status-chip.opportunity-type-chip {
-    background-color: #e0f2fe !important;
+    background-color: #f8fafc !important;
     color: #0369a1 !important;
-    border: 1px solid #bae6fd !important;
+    border: 1px solid #e2e8f0 !important;
     box-shadow: none !important;
 }
 
 .opportunity-status-chip.bg-success {
-    background-color: #dcfce7 !important;
-    color: #15803d !important;
-    border: 1px solid #bbf7d0 !important;
+    background-color: #f8fafc !important;
+    color: #16a34a !important;
+    border: 1px solid #e2e8f0 !important;
     box-shadow: none !important;
 }
 
 .opportunity-status-chip.bg-indigo {
-    background-color: #e0e7ff !important;
-    color: #4338ca !important;
-    border: 1px solid #c7d2fe !important;
+    background-color: #f8fafc !important;
+    color: #4f46e5 !important;
+    border: 1px solid #e2e8f0 !important;
     box-shadow: none !important;
 }
 
@@ -1984,33 +1984,33 @@ body {
 
 /* Favorites Buttons styling */
 .btn-outline-danger {
-    background-color: #fff1f2 !important;
-    color: #be123c !important;
-    border-color: #fecdd3 !important;
+    background-color: #ffffff !important;
+    color: #475569 !important;
+    border-color: #cbd5e1 !important;
     font-weight: 600 !important;
 }
 
 .btn-outline-danger:hover,
 .btn-outline-danger:focus,
 .btn-outline-danger:active {
-    background-color: #ffe4e6 !important;
-    color: #9f1239 !important;
-    border-color: #fda4af !important;
+    background-color: #fff1f2 !important;
+    color: #be123c !important;
+    border-color: #fecdd3 !important;
 }
 
 .btn-outline-warning {
-    background-color: #fffbeb !important;
-    color: #b45309 !important;
-    border-color: #fef3c7 !important;
+    background-color: #ffffff !important;
+    color: #475569 !important;
+    border-color: #cbd5e1 !important;
     font-weight: 600 !important;
 }
 
 .btn-outline-warning:hover,
 .btn-outline-warning:focus,
 .btn-outline-warning:active {
-    background-color: #fef3c7 !important;
-    color: #92400e !important;
-    border-color: #fde68a !important;
+    background-color: #fffbeb !important;
+    color: #b45309 !important;
+    border-color: #fef3c7 !important;
 }
 
 .btn-danger {
@@ -2190,4 +2190,32 @@ body {
     color: #6d28d9 !important;
     margin: 0 !important;
 }
+
+/* Card Parameter/Facts Badges (Homepage) */
+.card-facts-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.card-fact-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.25rem 0.55rem;
+    background-color: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    font-size: 0.78rem;
+    font-weight: 550;
+    color: #64748b;
+    transition: all 0.2s ease;
+}
+
+.card-fact-item:hover {
+    background-color: #f1f5f9;
+    border-color: #cbd5e1;
+    color: #334155;
+}
+
 

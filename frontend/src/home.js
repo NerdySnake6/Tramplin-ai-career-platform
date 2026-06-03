@@ -98,14 +98,23 @@ export function createHomeController({
             top.appendChild(badges);
             body.appendChild(top);
 
-            body.appendChild(createEl('p', 'detail-meta mb-2', `${opportunityTypeLabel(opportunity.type)} | ${workFormatLabel(opportunity.work_format)} | ${opportunity.location}`));
+            body.appendChild(createEl('p', 'detail-meta mb-2', `${workFormatLabel(opportunity.work_format)} | ${opportunity.location}`));
             body.appendChild(createEl('p', 'mb-3', opportunity.description.length > 170 ? `${opportunity.description.slice(0, 170)}...` : opportunity.description));
 
-            const metaList = createEl('div', 'small text-muted mb-3');
-            metaList.appendChild(createEl('div', '', `Публикация: ${formatDate(opportunity.published_at)}`));
-            metaList.appendChild(createEl('div', '', `Дата закрытия: ${formatDate(opportunity.expires_at)}`));
+            const metaList = createEl('div', 'card-facts-container mb-3');
+            
+            const factPub = createEl('div', 'card-fact-item');
+            factPub.innerHTML = `📅 <span>Публикация: ${formatDate(opportunity.published_at)}</span>`;
+            metaList.appendChild(factPub);
+
+            const factExp = createEl('div', 'card-fact-item');
+            factExp.innerHTML = `⏳ <span>Срок до: ${formatDate(opportunity.expires_at)}</span>`;
+            metaList.appendChild(factExp);
+
             if (opportunity.salary_range) {
-                metaList.appendChild(createEl('div', '', `Вознаграждение: ${opportunity.salary_range}`));
+                const factSal = createEl('div', 'card-fact-item');
+                factSal.innerHTML = `💰 <span>${opportunity.salary_range}</span>`;
+                metaList.appendChild(factSal);
             }
             body.appendChild(metaList);
 
