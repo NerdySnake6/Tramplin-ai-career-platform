@@ -459,6 +459,29 @@
                                 <h2 class="section-heading mb-0">Профиль</h2>
                                 <span class="small text-muted" id="profileStatusText">Гость</span>
                             </div>
+                            <form id="passwordForm" class="profile-security-form d-none mb-4">
+                                <div class="d-flex justify-content-between align-items-start gap-3 mb-2">
+                                    <div>
+                                        <h3 class="subsection-heading mb-1">Безопасность</h3>
+                                        <p class="text-muted small mb-0">Измени пароль, если он стал известен другим людям.</p>
+                                    </div>
+                                </div>
+                                <div class="row g-2">
+                                    <div class="col-md-4">
+                                        <label for="currentPassword" class="form-label">Текущий пароль</label>
+                                        <input type="password" class="form-control" id="currentPassword" autocomplete="current-password" required>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label for="newPassword" class="form-label">Новый пароль</label>
+                                        <input type="password" class="form-control" id="newPassword" minlength="6" autocomplete="new-password" required>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label for="newPasswordConfirm" class="form-label">Повтор нового пароля</label>
+                                        <input type="password" class="form-control" id="newPasswordConfirm" minlength="6" autocomplete="new-password" required>
+                                    </div>
+                                </div>
+                                <button type="submit" class="btn btn-sm btn-outline-primary mt-3">Изменить пароль</button>
+                            </form>
                             <form id="profileForm" class="d-none">
                                 <div class="mb-2">
                                     <label for="profileDisplayName" class="form-label">Отображаемое имя</label>
@@ -540,29 +563,6 @@
                                 </div>
 
                                 <button type="submit" class="btn btn-sm btn-primary mt-2">Сохранить профиль</button>
-                            </form>
-                            <form id="passwordForm" class="profile-security-form d-none mt-4">
-                                <div class="d-flex justify-content-between align-items-start gap-3 mb-2">
-                                    <div>
-                                        <h3 class="subsection-heading mb-1">Безопасность</h3>
-                                        <p class="text-muted small mb-0">Измени пароль, если он стал известен другим людям.</p>
-                                    </div>
-                                </div>
-                                <div class="row g-2">
-                                    <div class="col-md-4">
-                                        <label for="currentPassword" class="form-label">Текущий пароль</label>
-                                        <input type="password" class="form-control" id="currentPassword" autocomplete="current-password" required>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <label for="newPassword" class="form-label">Новый пароль</label>
-                                        <input type="password" class="form-control" id="newPassword" minlength="6" autocomplete="new-password" required>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <label for="newPasswordConfirm" class="form-label">Повтор нового пароля</label>
-                                        <input type="password" class="form-control" id="newPasswordConfirm" minlength="6" autocomplete="new-password" required>
-                                    </div>
-                                </div>
-                                <button type="submit" class="btn btn-sm btn-outline-primary mt-3">Изменить пароль</button>
                             </form>
                             <p class="text-muted mb-0" id="profileGuestHint">Войди в систему, чтобы заполнить профиль.</p>
                         </div>
@@ -807,7 +807,7 @@
                         <div class="mb-0">
                             <div class="d-flex justify-content-between align-items-center mb-1">
                                 <label for="coverLetter" class="form-label mb-0">Сопроводительное письмо</label>
-                                <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none d-none" id="copyCoverLetterBtn" style="font-size: 0.8rem;">📋 Скопировать</button>
+                                <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none d-none" id="copyCoverLetterBtn" style="font-size: 0.8rem;">Скопировать</button>
                             </div>
                             <textarea class="form-control" id="coverLetter" rows="5" placeholder="Коротко расскажи, почему эта возможность тебе подходит."></textarea>
                         </div>
@@ -1143,7 +1143,7 @@
                             <div class="col-12">
                                 <div class="d-flex justify-content-between align-items-center mb-1">
                                     <label for="employerOpportunityDescription" class="form-label mb-0">Описание</label>
-                                    <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none d-none" id="copyEmployerDescriptionBtn" style="font-size: 0.8rem;">📋 Скопировать</button>
+                                    <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none d-none" id="copyEmployerDescriptionBtn" style="font-size: 0.8rem;">Скопировать</button>
                                 </div>
                                 <textarea class="form-control" id="employerOpportunityDescription" rows="6" minlength="20" required></textarea>
                             </div>

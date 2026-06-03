@@ -200,13 +200,13 @@ export function createCuratorController({
             adminHint.textContent = 'Здесь можно модерировать пользователей, карточки и справочник тегов.';
             
             const emptyUsers = createEl('div', 'empty-state-panel');
-            emptyUsers.appendChild(createEl('div', 'empty-state-icon', '👤'));
+            emptyUsers.appendChild(createEl('div', 'empty-state-icon', 'ID'));
             emptyUsers.appendChild(createEl('div', 'fw-semibold', 'Необходима роль куратора'));
             emptyUsers.appendChild(createEl('div', 'text-muted small', 'Войди как куратор, чтобы модерировать пользователей.'));
             usersContainer.appendChild(emptyUsers);
             
             const emptyOpps = createEl('div', 'empty-state-panel');
-            emptyOpps.appendChild(createEl('div', 'empty-state-icon', '📋'));
+            emptyOpps.appendChild(createEl('div', 'empty-state-icon', 'MOD'));
             emptyOpps.appendChild(createEl('div', 'fw-semibold', 'Необходима роль куратора'));
             emptyOpps.appendChild(createEl('div', 'text-muted small', 'Карточки для модерации появятся здесь после авторизации.'));
             opportunitiesContainer.appendChild(emptyOpps);
@@ -229,7 +229,7 @@ export function createCuratorController({
         const filteredUsers = getFilteredCuratorUsers();
         if (!filteredUsers.length) {
             const emptyUsers = createEl('div', 'empty-state-panel');
-            emptyUsers.appendChild(createEl('div', 'empty-state-icon', '🔍'));
+            emptyUsers.appendChild(createEl('div', 'empty-state-icon', '0'));
             emptyUsers.appendChild(createEl('div', 'fw-semibold', 'Пользователи не найдены'));
             emptyUsers.appendChild(createEl('div', 'text-muted small', 'Попробуйте изменить параметры поиска или сбросить фильтры.'));
             
@@ -323,7 +323,7 @@ export function createCuratorController({
         const filteredOpportunities = getFilteredCuratorOpportunities();
         if (!filteredOpportunities.length) {
             const emptyOpps = createEl('div', 'empty-state-panel');
-            emptyOpps.appendChild(createEl('div', 'empty-state-icon', '🔍'));
+            emptyOpps.appendChild(createEl('div', 'empty-state-icon', '0'));
             emptyOpps.appendChild(createEl('div', 'fw-semibold', 'Карточки не найдены'));
             emptyOpps.appendChild(createEl('div', 'text-muted small', 'Попробуйте изменить параметры поиска или сбросить фильтры.'));
             

@@ -61,7 +61,7 @@ export function createHomeController({
 
         if (!opportunities.length) {
             const emptyState = createEl('div', 'empty-state-panel border-0 bg-transparent py-4 my-2');
-            const icon = hasActiveOpportunityFilters() ? '🔍' : '✨';
+            const icon = hasActiveOpportunityFilters() ? '0' : '—';
             emptyState.appendChild(createEl('div', 'empty-state-icon mb-2', icon));
             emptyState.appendChild(createEl('div', 'fw-semibold', hasActiveOpportunityFilters() ? 'По текущим фильтрам ничего не найдено' : 'Пока нет опубликованных возможностей'));
             emptyState.appendChild(createEl('div', 'text-muted small', 'Вы можете сбросить фильтры ниже, чтобы увидеть все доступные предложения.'));
@@ -215,7 +215,7 @@ export function createHomeController({
 
         if (!opportunities.length) {
             const panel = createEl('div', 'empty-state-panel');
-            const icon = hasActiveOpportunityFilters() ? '🔍' : '✨';
+            const icon = hasActiveOpportunityFilters() ? '0' : '—';
             panel.appendChild(createEl('div', 'empty-state-icon', icon));
             panel.appendChild(createEl('div', 'fw-semibold', hasActiveOpportunityFilters() ? 'По текущим фильтрам ничего не найдено' : 'Пока нет опубликованных возможностей'));
             panel.appendChild(
@@ -460,7 +460,7 @@ export function createHomeController({
 
         if (!favoriteOpportunities.length && !favoriteCompanies.length) {
             const emptyState = createEl('div', 'empty-state-panel p-3 border-0 bg-transparent');
-            emptyState.appendChild(createEl('div', 'empty-state-icon mb-2', '🤍'));
+            emptyState.appendChild(createEl('div', 'empty-state-icon mb-2', '0'));
             emptyState.appendChild(createEl('div', 'fw-semibold small', 'Избранное пусто'));
             emptyState.appendChild(createEl('div', 'text-muted small', 'Добавляй интересные вакансии и компании, чтобы быстро возвращаться к ним.'));
             container.appendChild(emptyState);

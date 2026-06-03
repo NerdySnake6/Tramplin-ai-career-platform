@@ -85,7 +85,7 @@ export function createEmployerController({
 
         if (!state.employerResponses.length) {
             const emptyState = createEl('div', 'empty-state-panel');
-            emptyState.appendChild(createEl('div', 'empty-state-icon', '📬'));
+            emptyState.appendChild(createEl('div', 'empty-state-icon', 'IN'));
             emptyState.appendChild(createEl('div', 'fw-semibold', 'Входящих откликов пока нет'));
             emptyState.appendChild(createEl('div', 'text-muted small', 'Здесь появятся отклики соискателей после публикации ваших вакансий и мероприятий.'));
             container.appendChild(emptyState);
@@ -95,7 +95,7 @@ export function createEmployerController({
 
         if (!filteredResponses.length) {
             const emptyState = createEl('div', 'empty-state-panel');
-            emptyState.appendChild(createEl('div', 'empty-state-icon', '🔍'));
+            emptyState.appendChild(createEl('div', 'empty-state-icon', '0'));
             emptyState.appendChild(createEl('div', 'fw-semibold', 'Откликов не найдено'));
             emptyState.appendChild(createEl('div', 'text-muted small', 'Попробуйте изменить параметры поиска или сбросить фильтры.'));
             
