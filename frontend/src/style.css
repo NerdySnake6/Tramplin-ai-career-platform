@@ -1817,6 +1817,36 @@ body {
     font-size: 0.9rem;
 }
 
+.password-field {
+    position: relative;
+}
+
+.password-field .form-control {
+    padding-right: 6.2rem;
+}
+
+.password-toggle-btn {
+    position: absolute;
+    top: 50%;
+    right: 0.45rem;
+    transform: translateY(-50%);
+    border: 0;
+    border-radius: 999px;
+    padding: 0.22rem 0.62rem;
+    background: rgba(13, 110, 253, 0.08);
+    color: #3157d5;
+    font-size: 0.78rem;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.password-toggle-btn:hover,
+.password-toggle-btn:focus-visible {
+    background: rgba(13, 110, 253, 0.14);
+    color: #2346b8;
+    outline: none;
+}
+
 .moderation-actions {
     display: flex;
     flex-wrap: wrap;

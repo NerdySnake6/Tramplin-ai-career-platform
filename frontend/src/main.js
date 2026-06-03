@@ -1567,6 +1567,8 @@ async function handlePasswordChangeSubmit(event) {
     const newPassword = el('newPassword').value;
     const newPasswordConfirm = el('newPasswordConfirm').value;
 
+    resetPasswordVisibility();
+    el('currentPassword').setCustomValidity('');
     if (newPassword !== newPasswordConfirm) {
         el('newPasswordConfirm').setCustomValidity('Пароли не совпадают.');
         el('newPasswordConfirm').reportValidity();
@@ -1587,16 +1589,50 @@ async function handlePasswordChangeSubmit(event) {
 
     if (!response.ok) {
         const error = await response.json().catch(() => ({ detail: 'Не удалось изменить пароль.' }));
-        showNotice('danger', typeof error.detail === 'string' ? error.detail : 'Не удалось изменить пароль.');
+        const errorDetail = typeof error.detail === 'string' ? error.detail : 'Не удалось изменить пароль.';
+        if (errorDetail === 'Текущий пароль указан неверно') {
+            el('currentPassword').setCustomValidity('Введен неверный текущий пароль.');
+            el('currentPassword').focus();
+            el('currentPassword').reportValidity();
+            return;
+        }
+        showNotice('danger', errorDetail);
         return;
     }
 
     el('passwordForm').reset();
+    resetPasswordVisibility();
     showNotice('success', 'Пароль изменен.');
+}
+
+function setPasswordFieldVisibility(inputId, visible) {
+    const input = el(inputId);
+    const button = document.querySelector(`[data-password-toggle="${inputId}"]`);
+    if (!input || !button) return;
+
+    input.type = visible ? 'text' : 'password';
+    button.textContent = visible ? 'Скрыть' : 'Показать';
+    button.setAttribute('aria-label', visible ? 'Скрыть пароль' : 'Показать пароль');
+}
+
+function resetPasswordVisibility() {
+    document.querySelectorAll('[data-password-toggle]').forEach((button) => {
+        setPasswordFieldVisibility(button.dataset.passwordToggle, false);
+    });
+}
+
+function handlePasswordVisibilityToggle(event) {
+    const inputId = event.currentTarget.dataset.passwordToggle;
+    const input = el(inputId);
+    if (!input) return;
+
+    setPasswordFieldVisibility(inputId, input.type === 'password');
 }
 
 function handleLogout(event) {
     event.preventDefault();
+    el('passwordForm').reset();
+    resetPasswordVisibility();
     clearToken();
     state.currentUser = null;
     state.responses = [];
@@ -1733,10 +1769,16 @@ function bindEvents() {
     el('registerForm').addEventListener('submit', handleRegisterSubmit);
     el('profileForm').addEventListener('submit', handleProfileSubmit);
     el('passwordForm').addEventListener('submit', handlePasswordChangeSubmit);
+    el('currentPassword').addEventListener('input', () => {
+        el('currentPassword').setCustomValidity('');
+    });
     ['newPassword', 'newPasswordConfirm'].forEach((id) => {
         el(id).addEventListener('input', () => {
             el('newPasswordConfirm').setCustomValidity('');
         });
+    });
+    document.querySelectorAll('[data-password-toggle]').forEach((button) => {
+        button.addEventListener('click', handlePasswordVisibilityToggle);
     });
     el('applyForm').addEventListener('submit', handleApplySubmit);
     el('generateCoverLetterAiBtn').addEventListener('click', () => {

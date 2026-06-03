@@ -469,15 +469,24 @@
                                 <div class="row g-2">
                                     <div class="col-md-4">
                                         <label for="currentPassword" class="form-label">Текущий пароль</label>
-                                        <input type="password" class="form-control" id="currentPassword" autocomplete="current-password" required>
+                                        <div class="password-field">
+                                            <input type="password" class="form-control" id="currentPassword" autocomplete="current-password" required>
+                                            <button type="button" class="password-toggle-btn" data-password-toggle="currentPassword" aria-label="Показать текущий пароль">Показать</button>
+                                        </div>
                                     </div>
                                     <div class="col-md-4">
                                         <label for="newPassword" class="form-label">Новый пароль</label>
-                                        <input type="password" class="form-control" id="newPassword" minlength="6" autocomplete="new-password" required>
+                                        <div class="password-field">
+                                            <input type="password" class="form-control" id="newPassword" minlength="6" autocomplete="new-password" required>
+                                            <button type="button" class="password-toggle-btn" data-password-toggle="newPassword" aria-label="Показать новый пароль">Показать</button>
+                                        </div>
                                     </div>
                                     <div class="col-md-4">
                                         <label for="newPasswordConfirm" class="form-label">Повтор нового пароля</label>
-                                        <input type="password" class="form-control" id="newPasswordConfirm" minlength="6" autocomplete="new-password" required>
+                                        <div class="password-field">
+                                            <input type="password" class="form-control" id="newPasswordConfirm" minlength="6" autocomplete="new-password" required>
+                                            <button type="button" class="password-toggle-btn" data-password-toggle="newPasswordConfirm" aria-label="Показать повтор нового пароля">Показать</button>
+                                        </div>
                                     </div>
                                 </div>
                                 <button type="submit" class="btn btn-sm btn-outline-primary mt-3">Изменить пароль</button>
