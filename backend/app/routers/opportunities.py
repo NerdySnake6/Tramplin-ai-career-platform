@@ -1,6 +1,7 @@
 """Маршруты для просмотра и управления возможностями на платформе."""
 
 import logging
+import re
 from datetime import datetime
 from typing import List, Optional
 
@@ -44,6 +45,24 @@ def should_geocode(location: Optional[str], work_format: Optional[str]) -> bool:
     return True
 
 
+COORDINATES_PATTERN = re.compile(r"\[?\s*(-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)\s*\]?")
+
+
+def extract_coordinates_from_text(text: Optional[str]) -> tuple[Optional[float], Optional[float]]:
+    """Извлекает координаты в формате [широта, долгота] из текста адреса."""
+    if not text:
+        return None, None
+    match = COORDINATES_PATTERN.search(text)
+    if match:
+        try:
+            lat = float(match.group(1))
+            lng = float(match.group(2))
+            return lat, lng
+        except ValueError:
+            pass
+    return None, None
+
+
 def resolve_coordinates(
     location: Optional[str],
     work_format: Optional[str],
@@ -53,6 +72,10 @@ def resolve_coordinates(
     """Возвращает координаты из входных данных или из геокодера."""
     if lat is not None and lng is not None:
         return lat, lng
+
+    text_lat, text_lng = extract_coordinates_from_text(location)
+    if text_lat is not None and text_lng is not None:
+        return text_lat, text_lng
 
     if not should_geocode(location, work_format):
         return None, None
