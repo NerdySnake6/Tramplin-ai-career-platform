@@ -76,7 +76,7 @@ export function createHomeController({
 
             const top = createEl('div', 'd-flex justify-content-between align-items-start gap-2 mb-2');
             const titleWrap = createEl('div', 'opportunity-title-wrap');
-            const title = createEl('h5', 'card-title mb-1');
+            const title = createEl('h3', 'card-title h5 mb-1');
             const titleLink = createEl('a', 'opportunity-title-link', opportunity.title);
             titleLink.href = `/opportunities/${opportunity.id}`;
             titleLink.addEventListener('click', (event) => {
@@ -255,7 +255,7 @@ export function createHomeController({
 
             const header = createEl('div', 'd-flex w-100 justify-content-between gap-2');
             const titleWrap = createEl('div', 'opportunity-title-wrap');
-            const title = createEl('h6', 'mb-1');
+            const title = createEl('h3', 'h6 mb-1');
             const titleLink = createEl('a', 'opportunity-title-link', opportunity.title);
             titleLink.href = `/opportunities/${opportunity.id}`;
             titleLink.addEventListener('click', (event) => {

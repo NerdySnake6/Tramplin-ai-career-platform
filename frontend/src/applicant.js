@@ -173,7 +173,7 @@ export function createApplicantController({
         const data = await response.json();
         const profile = data.applicant_profile;
         container.innerHTML = '';
-        container.appendChild(createEl('h5', 'mb-1', profile.full_name || data.display_name));
+        container.appendChild(createEl('h3', 'h5 mb-1', profile.full_name || data.display_name));
         container.appendChild(createEl('div', 'small text-muted mb-3', data.is_contact ? 'Контакт в твоей сети' : 'Открытый профиль'));
 
         const meta = [
@@ -198,7 +198,7 @@ export function createApplicantController({
             return;
         }
 
-        container.appendChild(createEl('h6', 'small text-uppercase text-muted mt-3 mb-2', 'Видимые отклики'));
+        container.appendChild(createEl('h4', 'small text-uppercase text-muted mt-3 mb-2', 'Видимые отклики'));
         data.visible_responses.forEach((responseItem) => {
             const item = createEl('div', 'contact-item py-2');
             item.appendChild(createEl('div', 'fw-semibold', `Отклик на возможность #${responseItem.opportunity_id}`));
