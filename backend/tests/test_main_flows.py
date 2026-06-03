@@ -47,6 +47,40 @@ def test_should_geocode_remote_format_when_location_is_physical_address():
     assert not opportunities_router.should_geocode("Удаленно, онлайн", "remote")
 
 
+def test_resolve_coordinates_does_not_use_fallback_without_geocoder(monkeypatch):
+    """Проверяет, что без настроенного геокодера координаты не подставляются заглушкой."""
+    monkeypatch.setattr(opportunities_router, "geocoder_is_configured", lambda: False)
+
+    lat, lng = opportunities_router.resolve_coordinates(
+        "Москва, Лаврушинский переулок, 10",
+        "office",
+        None,
+        None,
+    )
+
+    assert lat is None
+    assert lng is None
+
+
+def test_resolve_coordinates_does_not_use_fallback_on_geocoder_error(monkeypatch):
+    """Проверяет, что ошибка геокодера не создает случайные координаты."""
+    def broken_geocode_address(location):
+        raise opportunities_router.GeocodingError("Invalid api key")
+
+    monkeypatch.setattr(opportunities_router, "geocoder_is_configured", lambda: True)
+    monkeypatch.setattr(opportunities_router, "geocode_address", broken_geocode_address)
+
+    lat, lng = opportunities_router.resolve_coordinates(
+        "Москва, Лаврушинский переулок, 10",
+        "office",
+        None,
+        None,
+    )
+
+    assert lat is None
+    assert lng is None
+
+
 def register_user(client, *, email, password, display_name, role):
     """Регистрирует пользователя через API и возвращает ответ."""
     return client.post(
@@ -1536,4 +1570,3 @@ def test_opportunity_employer_is_verified_serialization(client, db_session):
     
     assert verified_json["employer_is_verified"] is True
     assert unverified_json["employer_is_verified"] is False
-

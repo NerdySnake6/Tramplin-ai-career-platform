@@ -14,18 +14,18 @@
 
 ## Стек
 
-- **Backend**: `FastAPI`, `SQLAlchemy`, `Alembic`, `SQLite`
+- **Backend**: `FastAPI`, `SQLAlchemy`, `Alembic`, `PostgreSQL`
 - **Frontend**: `JavaScript`, `Node.js`, `Vite`, `Bootstrap`
 - **Интеграции**: `Yandex Maps JavaScript API`, `Yandex HTTP Geocoder`, `Яндекс Метрика`
 
 ## Структура проекта
 
-- `backend/` — API, модели, миграции и база данных SQLite
+- `backend/` — API, модели, миграции и доступ к базе данных
 - `frontend/` — клиентское приложение на Vite
 
 ## Production-архитектура
 
-В production проект запускается через `docker-compose.yml` как два контейнера:
+В production проект запускается через `docker-compose.yml` как три контейнера:
 
 ```mermaid
 flowchart LR
@@ -34,7 +34,8 @@ flowchart LR
     V --> N["frontend container: nginx"]
     N --> S["static SPA: /usr/share/nginx/html"]
     N -->|"/api/*"| B["backend container: FastAPI :8000"]
-    B --> DB["SQLite: Docker volume /data/tramplin.db"]
+    B --> DB["db container: PostgreSQL :5432"]
+    DB --> VDB["Docker volume: tramplin_postgres_data"]
     B --> YG["Yandex HTTP Geocoder"]
     U --> YM["Yandex Maps JS API"]
 ```
@@ -42,7 +43,8 @@ flowchart LR
 - наружу опубликован только `frontend`-контейнер на портах `80` и `443`
 - nginx внутри `frontend` отдает собранный Vite frontend и проксирует `/api/*` в backend
 - backend доступен только внутри Docker-сети по имени `backend:8000`
-- SQLite-база хранится в named volume `tramplin_backend_data`, а не внутри контейнера
+- PostgreSQL доступен только внутри Docker-сети по имени `db:5432`
+- данные PostgreSQL хранятся в named volume `tramplin_postgres_data`, а не внутри контейнера
 - TLS-сертификаты Let's Encrypt лежат на VPS в `/etc/letsencrypt` и монтируются в nginx read-only
 - backend при старте применяет Alembic-миграции и затем запускает FastAPI через Uvicorn
 - `www.tramplin.site` редиректит на canonical-домен `tramplin.site`
@@ -183,8 +185,8 @@ npm run dev
 
 В репозитории есть готовая Docker-конфигурация:
 
-- `docker-compose.yml` — поднимает backend и frontend
-- `backend/Dockerfile` — FastAPI, Alembic и SQLite
+- `docker-compose.yml` — поднимает PostgreSQL, backend и frontend
+- `backend/Dockerfile` — FastAPI, Alembic и PostgreSQL-драйвер
 - `frontend/Dockerfile` — production-сборка Vite и nginx
 
 ### 1. Подготовить переменные окружения
@@ -268,9 +270,9 @@ AI_MAX_OUTPUT_TOKENS=3000
 
 ```bash
 cd ~/tramplin
-docker-compose stop backend
-docker-compose rm -f backend
-docker-compose up -d backend
+docker compose stop backend
+docker compose rm -f backend
+docker compose up -d backend
 ```
 
 4. Проверь статус интеграции:
@@ -312,7 +314,19 @@ docker compose ps
 docker compose logs -f backend
 ```
 
-При старте backend автоматически применяет миграции Alembic и создает SQLite-базу в Docker volume.
+При старте backend ждет готовности PostgreSQL и автоматически применяет миграции Alembic.
+
+### Миграция старой SQLite-базы в PostgreSQL
+
+Если нужно перенести данные из прежней SQLite-базы, скрипт `backend/migrate_data.py` можно запускать внутри backend-контейнера. Файл SQLite должен быть доступен в контейнере.
+
+```bash
+docker compose cp /root/tramplin/tramplin_backup.db backend:/app/tramplin_backup.db
+docker compose exec backend env TRAMPLIN_SQLITE_BACKUP_PATH=/app/tramplin_backup.db python migrate_data.py
+```
+
+Можно указать путь через `TRAMPLIN_SQLITE_BACKUP_PATH` или полный SQLAlchemy URL через `TRAMPLIN_SQLITE_BACKUP_URL`.
+После переноса скрипт синхронизирует PostgreSQL sequences, чтобы новые записи получали свободные `id`.
 
 ## Первый администратор
 
