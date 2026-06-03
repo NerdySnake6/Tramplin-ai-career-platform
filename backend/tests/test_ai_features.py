@@ -225,13 +225,51 @@ def test_curator_can_request_moderation_review(client, db_session, monkeypatch):
     payload = response.json()
     assert payload["risk_level"] == "high"
     assert "�" not in str(payload)
-    assert payload["reasons"] == ["Текст мжет содержать мутные условия"]
+    assert payload["reasons"][0] == "Обнаружены признаки операций с банковскими картами, счетами, дропами или обналичиванием."
+    assert "Текст мжет содержать мутные условия" in payload["reasons"]
     assert payload["highlights"][0]["level"] == "suspicious"
     assert payload["rule_matches"][0]["category"] == "illegal_finance"
     assert payload["rule_matches"][0]["level"] == "danger"
     assert payload["risk_sources"] == ["rules", "ai"]
     db_session.refresh(opportunity)
     assert opportunity.is_active is True
+
+
+def test_moderation_review_returns_rule_fallback_when_ai_fails(client, db_session, monkeypatch):
+    """Проверяет, что системные правила доступны куратору даже при сбое AI."""
+    enable_ai(monkeypatch)
+    curator = create_service_user(db_session, email="curator-rule-fallback@example.com", role="curator")
+    employer = create_service_user(db_session, email="employer-rule-fallback@example.com", role="employer")
+    opportunity = models.Opportunity(
+        employer_id=employer.id,
+        title="Курьер",
+        description="Нужен курьер: адреса и товар выдаем ежедневно, без вопросов.",
+        type="job",
+        work_format="office",
+        location="Москва",
+        expires_at=models.utc_now_naive() + timedelta(days=14),
+    )
+    db_session.add(opportunity)
+    db_session.commit()
+
+    def fail_ai(*_args, **_kwargs):
+        raise ai_router.ai_service.AIServiceError("timeout")
+
+    monkeypatch.setattr(ai_router.ai_service, "call_chat_json", fail_ai)
+    headers = login_existing_user(client, email=curator.email)
+
+    response = client.post(
+        "/ai/moderation-review",
+        headers=headers,
+        json={"opportunity_id": opportunity.id},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["risk_level"] == "high"
+    assert payload["risk_sources"] == ["rules"]
+    assert payload["rule_matches"][0]["category"] == "illegal_delivery"
+    assert "AI временно недоступен" in payload["recommended_action"]
 
 
 def test_employer_cannot_request_moderation_review(client, db_session, monkeypatch):

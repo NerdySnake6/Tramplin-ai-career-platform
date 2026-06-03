@@ -568,26 +568,30 @@ export function createCuratorController({
         button.disabled = true;
         button.textContent = 'AI проверяет...';
 
-        const response = await apiFetch('/ai/moderation-review', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(payload),
-        });
+        try {
+            const response = await apiFetch('/ai/moderation-review', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(payload),
+            });
 
-        button.disabled = false;
-        button.textContent = 'AI-проверка';
+            if (!response.ok) {
+                const error = await response.json().catch(() => ({ detail: 'AI-проверка временно недоступна.' }));
+                showNotice('danger', typeof error.detail === 'string' ? error.detail : 'AI-проверка временно недоступна.');
+                return;
+            }
 
-        if (!response.ok) {
-            const error = await response.json().catch(() => ({ detail: 'AI-проверка временно недоступна.' }));
-            showNotice('danger', typeof error.detail === 'string' ? error.detail : 'AI-проверка временно недоступна.');
-            return;
+            const result = await response.json();
+            renderCuratorOpportunityAiReview(result, payload.description || '');
+            showNotice('success', 'AI подготовил подсказку для ручной модерации.');
+        } catch (_error) {
+            showNotice('danger', 'AI-проверка временно недоступна.');
+        } finally {
+            button.disabled = false;
+            button.textContent = 'AI-проверка';
         }
-
-        const result = await response.json();
-        renderCuratorOpportunityAiReview(result, payload.description || '');
-        showNotice('success', 'AI подготовил подсказку для ручной модерации.');
     }
 
     async function handleCuratorUserSubmit(event) {

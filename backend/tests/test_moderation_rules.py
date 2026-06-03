@@ -17,9 +17,23 @@ def test_detects_illegal_finance_card_schemes():
     assert ("illegal_finance", "danger") in {(match.category, match.level) for match in matches}
 
 
+def test_detects_obfuscated_illegal_finance_card_schemes():
+    """Проверяет выявление схем с картами при маскировке пробелами."""
+    text = "К у п и м б а н к о в с к и е к а р т ы для приема платежей."
+
+    assert ("illegal_finance", "danger") in match_categories(text)
+
+
 def test_detects_illegal_delivery_masking():
     """Проверяет выявление замаскированной незаконной курьерской работы."""
     text = "Нужен курьер: адреса и товар выдаем ежедневно, без вопросов, выплаты каждый день."
+
+    assert ("illegal_delivery", "danger") in match_categories(text)
+
+
+def test_detects_obfuscated_illegal_delivery_masking():
+    """Проверяет выявление незаконной доставки при маскировке пробелами."""
+    text = "Нужен к у р ь е р: а д р е с а и т о в а р, без вопросов."
 
     assert ("illegal_delivery", "danger") in match_categories(text)
 
@@ -53,6 +67,20 @@ def test_ignores_normal_devops_vacancy():
     )
 
     assert scan_moderation_rules(description=text, salary_range="180 000 рублей") == []
+
+
+def test_ignores_normal_delivery_without_illegal_markers():
+    """Проверяет, что обычная курьерская вакансия без опасных связок не красится."""
+    text = "Ищем курьера для доставки документов клиентам. Маршруты и график согласуются с координатором."
+
+    assert scan_moderation_rules(description=text) == []
+
+
+def test_ignores_safe_payroll_card_phrase():
+    """Проверяет, что зарплата на банковскую карту не считается запросом платежных данных."""
+    text = "Официальное трудоустройство, зарплата на банковскую карту после заключения договора."
+
+    assert scan_moderation_rules(description=text) == []
 
 
 def test_ignores_crypto_payment_without_other_red_flags():

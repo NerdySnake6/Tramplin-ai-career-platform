@@ -169,6 +169,60 @@ def moderation_risk_sources(
     return sources
 
 
+def unique_limited(values: Iterable[str], limit: int) -> list[str]:
+    """Возвращает уникальные непустые строки с ограничением по количеству."""
+    result = []
+    seen = set()
+    for value in values:
+        cleaned = clean_ai_text(value).strip()
+        key = cleaned.casefold()
+        if not cleaned or key in seen:
+            continue
+        seen.add(key)
+        result.append(cleaned)
+        if len(result) >= limit:
+            break
+    return result
+
+
+def rule_risk_level(rule_matches: list[schemas.ModerationRuleMatch]) -> str:
+    """Определяет итоговый уровень риска только по системным правилам."""
+    if any(match.level == "danger" for match in rule_matches):
+        return "high"
+    if rule_matches:
+        return "medium"
+    return "low"
+
+
+def rule_only_moderation_response(
+    rule_matches: list[schemas.ModerationRuleMatch],
+    *,
+    ai_unavailable: bool = False,
+) -> schemas.AIModerationReviewResponse:
+    """Возвращает модерационную подсказку без AI, если системные правила уже нашли риск."""
+    reasons = unique_limited((match.reason for match in rule_matches), 8)
+    checklist = [
+        "Проверьте найденные системные совпадения вручную.",
+        "Сверьте условия вакансии с официальными источниками работодателя.",
+        "Не публикуйте карточку, пока опасные или неоднозначные формулировки не будут устранены.",
+    ]
+    recommended_action = (
+        "AI временно недоступен, но системные правила нашли риск. "
+        "Рекомендуется отложить публикацию и запросить у работодателя уточнения."
+        if ai_unavailable
+        else "Рекомендуется проверить найденные системные совпадения перед публикацией."
+    )
+    return schemas.AIModerationReviewResponse(
+        risk_level=rule_risk_level(rule_matches),
+        reasons=reasons,
+        checklist=checklist,
+        recommended_action=recommended_action,
+        highlights=[],
+        rule_matches=rule_matches,
+        risk_sources=["rules"] if rule_matches else [],
+    )
+
+
 def merge_moderation_response(
     parsed: schemas.AIModerationReviewResponse,
     rule_matches: list[schemas.ModerationRuleMatch],
@@ -180,9 +234,25 @@ def merge_moderation_response(
     elif rule_matches and risk_level == "low":
         risk_level = "medium"
 
+    rule_reasons = [match.reason for match in rule_matches]
+    reasons = unique_limited([*rule_reasons, *parsed.reasons], 8)
+    checklist = unique_limited(
+        [
+            *(
+                ["Проверьте найденные системные совпадения вручную."]
+                if rule_matches
+                else []
+            ),
+            *parsed.checklist,
+        ],
+        8,
+    )
+
     return parsed.model_copy(
         update={
             "risk_level": risk_level,
+            "reasons": reasons,
+            "checklist": checklist,
             "rule_matches": rule_matches,
             "risk_sources": moderation_risk_sources(parsed, rule_matches),
         }
@@ -403,11 +473,15 @@ def review_moderation(
         parsed = schemas.AIModerationReviewResponse.model_validate(raw)
         return merge_moderation_response(parsed, rule_match_payload)
     except ValidationError as exc:
+        if rule_match_payload:
+            return rule_only_moderation_response(rule_match_payload, ai_unavailable=True)
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail="AI вернул JSON без ожидаемых полей.",
         ) from exc
     except ai_service.AIServiceError as exc:
+        if rule_match_payload:
+            return rule_only_moderation_response(rule_match_payload, ai_unavailable=True)
         handle_ai_error(exc)
 
 

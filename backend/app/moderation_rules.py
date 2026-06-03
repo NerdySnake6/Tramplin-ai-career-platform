@@ -86,6 +86,12 @@ def compact_contains_any(text: str, patterns: Sequence[str]) -> bool:
     return any(pattern in compact for pattern in patterns)
 
 
+def compact_has_any(text: str, fragments: Sequence[str]) -> bool:
+    """Проверяет наличие compact-фрагментов с учетом нормализации."""
+    compact = compact_text(text)
+    return any(compact_pattern(fragment) in compact for fragment in fragments)
+
+
 def first_snippet(original: str, patterns: Sequence[str]) -> str:
     """Возвращает короткий исходный фрагмент рядом с первым совпадением."""
     normalized = normalize_text(original)
@@ -189,7 +195,10 @@ CARD_OBJECT_PATTERNS = [
     r"\bреквизит\w*\b",
     r"\bдроп\w*\b",
 ]
-CARD_OBJECT_COMPACT = [compact_pattern(value) for value in ("карта", "банккарта", "счет", "реквизиты", "дроп")]
+CARD_OBJECT_COMPACT = [
+    compact_pattern(value)
+    for value in ("карта", "банккарта", "банковскиекарт", "счет", "реквизиты", "дроп")
+]
 CARD_ACTION_PATTERNS = [
     r"\bкуп\w*\b",
     r"\bпрод\w*\b",
@@ -201,6 +210,17 @@ CARD_ACTION_PATTERNS = [
     r"\bприем\w*\s+платеж\w*\b",
     r"\bобнал\w*\b",
 ]
+CARD_ACTION_COMPACT = [
+    "куп",
+    "прод",
+    "аренд",
+    "сда",
+    "переда",
+    "оформ",
+    "приемплатеж",
+    "приниматьплатеж",
+    "обнал",
+]
 
 
 def scan_illegal_finance(
@@ -211,8 +231,8 @@ def scan_illegal_finance(
     """Ищет признаки дропперства, обнала и операций с чужими картами."""
     normalized = normalize_text(text)
     has_object = contains_any(normalized, CARD_OBJECT_PATTERNS) or compact_contains_any(text, CARD_OBJECT_COMPACT)
-    has_action = contains_any(normalized, CARD_ACTION_PATTERNS)
-    has_drop_marker = contains_any(normalized, [r"\bдроп\w*\b", r"\bобнал\w*\b"])
+    has_action = contains_any(normalized, CARD_ACTION_PATTERNS) or compact_has_any(text, CARD_ACTION_COMPACT)
+    has_drop_marker = contains_any(normalized, [r"\bдроп\w*\b", r"\bобнал\w*\b"]) or compact_has_any(text, ["дроп", "обнал"])
     if has_drop_marker or (has_object and has_action):
         add_match(
             matches,
@@ -230,16 +250,30 @@ COURIER_PATTERNS = [
     r"\bразнос\w*\b",
     r"\bпоездк\w*\b",
 ]
+COURIER_COMPACT = ["курьер", "достав", "разнос", "поездк"]
 ILLEGAL_DELIVERY_PATTERNS = [
     r"\bклад\w*\b",
     r"\bзаклад\w*\b",
-    r"\bкоординат\w*\b",
+    r"\bкоординат(?:ы|ам|ах|ами|ов)?\b",
     r"\bтайник\w*\b",
     r"\bадрес\w*\b",
     r"\bтовар\w*\b",
     r"\bбез\s+вопрос\w*\b",
     r"\bаноним\w*\b",
     r"\bежедневн\w*\s+выплат\w*\b",
+]
+ILLEGAL_DELIVERY_COMPACT = [
+    "клад",
+    "заклад",
+    "координаты",
+    "координатам",
+    "координатах",
+    "тайник",
+    "адрес",
+    "товар",
+    "безвопрос",
+    "аноним",
+    "ежедневнвыплат",
 ]
 
 
@@ -250,7 +284,7 @@ def scan_illegal_delivery(
 ) -> None:
     """Ищет маскировку незаконной курьерской работы."""
     normalized = normalize_text(text)
-    if contains_any(normalized, [r"\bклад\w*\b", r"\bзаклад\w*\b"]):
+    if contains_any(normalized, [r"\bклад\w*\b", r"\bзаклад\w*\b"]) or compact_has_any(text, ["клад", "заклад"]):
         add_match(
             matches,
             seen,
@@ -261,10 +295,14 @@ def scan_illegal_delivery(
         )
         return
 
-    if not contains_any(normalized, COURIER_PATTERNS):
+    if not contains_any(normalized, COURIER_PATTERNS) and not compact_has_any(text, COURIER_COMPACT):
         return
 
-    suspicious_count = sum(1 for pattern in ILLEGAL_DELIVERY_PATTERNS if re.search(pattern, normalized))
+    suspicious_count = sum(
+        1
+        for pattern, fragment in zip(ILLEGAL_DELIVERY_PATTERNS, ILLEGAL_DELIVERY_COMPACT)
+        if re.search(pattern, normalized) or compact_has_any(text, [fragment])
+    )
     if suspicious_count >= 2:
         add_match(
             matches,
@@ -291,21 +329,25 @@ DEPOSIT_PATTERNS = [
     r"\bпредоплат\w*\b",
     r"\bоплат\w*\s+доступ\w*\b",
 ]
+DEPOSIT_COMPACT = ["депозит", "взнос", "предоплат", "оплатдоступ"]
 UNPAID_TEST_PATTERNS = [
     r"\bтестов\w*\b",
     r"\bиспытательн\w*\b",
 ]
+UNPAID_TEST_COMPACT = ["тестов", "испытательн"]
 UNPAID_MARKERS = [
     r"\bбез\s+оплат\w*\b",
     r"\bнеоплач\w*\b",
     r"\bреальн\w*\s+проект\w*\b",
     r"\bпосле\s+выполнен\w*\b",
 ]
+UNPAID_MARKER_COMPACT = ["безоплат", "неоплач", "реальнпроект", "послевыполнен"]
 NO_CONTRACT_PATTERNS = [
     r"\bбез\s+договор\w*\b",
     r"\bдоговор\w*\s+после\w*\b",
     r"\bоформлен\w*\s+после\w*\b",
 ]
+NO_CONTRACT_COMPACT = ["бездоговор", "договорпосле", "оформленпосле"]
 
 
 def scan_scam_or_exploitation(
@@ -315,7 +357,7 @@ def scan_scam_or_exploitation(
 ) -> None:
     """Ищет эксплуатационные или мошеннические условия вакансии."""
     normalized = normalize_text(text)
-    if contains_any(normalized, DEPOSIT_PATTERNS):
+    if contains_any(normalized, DEPOSIT_PATTERNS) or compact_has_any(text, DEPOSIT_COMPACT):
         add_match(
             matches,
             seen,
@@ -325,8 +367,8 @@ def scan_scam_or_exploitation(
             reason="Работодатель требует депозит, взнос, предоплату или оплату доступа.",
         )
 
-    has_test = contains_any(normalized, UNPAID_TEST_PATTERNS)
-    has_unpaid_marker = contains_any(normalized, UNPAID_MARKERS)
+    has_test = contains_any(normalized, UNPAID_TEST_PATTERNS) or compact_has_any(text, UNPAID_TEST_COMPACT)
+    has_unpaid_marker = contains_any(normalized, UNPAID_MARKERS) or compact_has_any(text, UNPAID_MARKER_COMPACT)
     if has_test and has_unpaid_marker:
         add_match(
             matches,
@@ -337,7 +379,7 @@ def scan_scam_or_exploitation(
             reason="Тестовое задание похоже на неоплачиваемую работу или работу на реальном проекте.",
         )
 
-    if contains_any(normalized, NO_CONTRACT_PATTERNS):
+    if contains_any(normalized, NO_CONTRACT_PATTERNS) or compact_has_any(text, NO_CONTRACT_COMPACT):
         add_match(
             matches,
             seen,
@@ -355,8 +397,8 @@ IDENTITY_PATTERNS = [
     r"\bснилс\w*\b",
     r"\bинн\w*\b",
     r"\bномер\w*\s+карт\w*\b",
-    r"\bбанковск\w*\s+карт\w*\b",
 ]
+IDENTITY_COMPACT = ["паспорт", "фотодокумент", "скандокумент", "снилс", "инн", "номеркарт"]
 EARLY_STAGE_PATTERNS = [
     r"\bдо\s+собеседован\w*\b",
     r"\bдо\s+оффер\w*\b",
@@ -364,6 +406,7 @@ EARLY_STAGE_PATTERNS = [
     r"\bдля\s+провер\w*\b",
     r"\bсразу\s+пришл\w*\b",
 ]
+EARLY_STAGE_COMPACT = ["дособеседован", "дооффер", "длярегистрац", "дляпровер", "сразупришл"]
 
 
 def scan_identity_risk(
@@ -373,11 +416,12 @@ def scan_identity_risk(
 ) -> None:
     """Ищет преждевременный запрос документов или платежных данных."""
     normalized = normalize_text(text)
-    has_identity = contains_any(normalized, IDENTITY_PATTERNS)
+    has_identity = contains_any(normalized, IDENTITY_PATTERNS) or compact_has_any(text, IDENTITY_COMPACT)
     if not has_identity:
         return
 
-    level: ModerationRuleLevel = "danger" if contains_any(normalized, EARLY_STAGE_PATTERNS) else "suspicious"
+    has_early_stage = contains_any(normalized, EARLY_STAGE_PATTERNS) or compact_has_any(text, EARLY_STAGE_COMPACT)
+    level: ModerationRuleLevel = "danger" if has_early_stage else "suspicious"
     add_match(
         matches,
         seen,
@@ -395,6 +439,7 @@ UNREALISTIC_PROMISE_PATTERNS = [
     r"\b2\s*час\w*\s+в\s+день\b",
     r"\bпассивн\w*\s+доход\w*\b",
 ]
+UNREALISTIC_PROMISE_COMPACT = ["гарантированндоход", "безопыт", "любойвозраст", "2часвдень", "пассивнодоход"]
 HIGH_SALARY_PATTERN = re.compile(r"\b(?:[2-9]\d{5}|[1-9]\d{2}\s?000|[2-9]\d{2}\s?к)\b")
 
 
@@ -405,7 +450,11 @@ def scan_unrealistic_promises(
 ) -> None:
     """Ищет нереалистичные обещания, требующие ручной проверки."""
     normalized = normalize_text(text)
-    marker_count = sum(1 for pattern in UNREALISTIC_PROMISE_PATTERNS if re.search(pattern, normalized))
+    marker_count = sum(
+        1
+        for pattern, fragment in zip(UNREALISTIC_PROMISE_PATTERNS, UNREALISTIC_PROMISE_COMPACT)
+        if re.search(pattern, normalized) or compact_has_any(text, [fragment])
+    )
     has_high_salary = bool(HIGH_SALARY_PATTERN.search(normalized))
     if marker_count >= 2 or (marker_count >= 1 and has_high_salary):
         add_match(
