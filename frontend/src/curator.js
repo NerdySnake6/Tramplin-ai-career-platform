@@ -362,9 +362,27 @@ export function createCuratorController({
         el('curatorOpportunityExpiresAt').value = toDateTimeLocalValue(opportunity.expires_at);
         el('curatorOpportunityDescription').value = opportunity.description || '';
         el('curatorOpportunityActive').checked = Boolean(opportunity.is_active);
+        renderCuratorOpportunityTags(opportunity.tags || []);
         renderCuratorOpportunityAiReview(null);
         refreshFieldCounters();
         getCuratorOpportunityModal().show();
+    }
+
+    function renderCuratorOpportunityTags(tags) {
+        const container = el('curatorOpportunityTags');
+        if (!container) return;
+
+        container.innerHTML = '';
+        if (!Array.isArray(tags) || !tags.length) {
+            container.appendChild(createEl('span', 'text-muted small', 'Теги не указаны.'));
+            return;
+        }
+
+        tags.forEach((tag) => {
+            const chip = createEl('span', 'tag-choice active readonly', tag.name);
+            chip.title = 'Тег карточки';
+            container.appendChild(chip);
+        });
     }
 
     function highlightLabel(level) {

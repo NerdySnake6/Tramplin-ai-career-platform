@@ -6,6 +6,7 @@ from app import models
 from app.auth import create_access_token
 from app.email_service import EmailDeliveryError
 from app.opportunity_visibility import is_expiration_datetime_allowed, normalize_expiration_datetime
+from app.routers import opportunities as opportunities_router
 from app.routers import auth as auth_router
 from app.routers.opportunities import EMPLOYER_FREE_OPPORTUNITY_LIMIT
 from app.tag_validation import MAX_TAGS_PER_CATEGORY
@@ -38,6 +39,12 @@ def test_is_expiration_datetime_allowed_requires_minimum_lifetime():
 
     assert not is_expiration_datetime_allowed(datetime(2026, 6, 4, 11, 59), now)
     assert is_expiration_datetime_allowed(datetime(2026, 6, 4, 12, 0), now)
+
+
+def test_should_geocode_remote_format_when_location_is_physical_address():
+    """Проверяет, что удаленный формат не запрещает геокодирование реального адреса."""
+    assert opportunities_router.should_geocode("Москва, Лаврушинский переулок, 10", "remote")
+    assert not opportunities_router.should_geocode("Удаленно, онлайн", "remote")
 
 
 def register_user(client, *, email, password, display_name, role):
@@ -1293,6 +1300,72 @@ def test_curator_can_verify_employers_and_moderate_opportunities(client, db_sess
     assert moderate_response.json()["is_active"] is False
     assert moderate_response.json()["title"] == "Moderated title"
     assert moderate_response.json()["location"] == "Санкт-Петербург"
+
+
+def test_curator_update_retries_geocoding_for_existing_card_without_coordinates(client, db_session, monkeypatch):
+    """Проверяет повторное геокодирование старой карточки без координат при сохранении куратором."""
+    geocoded_locations = []
+
+    def fake_geocode_address(location):
+        geocoded_locations.append(location)
+        return {
+            "lat": 55.744,
+            "lng": 37.62,
+            "formatted_address": location,
+            "precision": "exact",
+        }
+
+    monkeypatch.setattr(opportunities_router, "geocoder_is_configured", lambda: True)
+    monkeypatch.setattr(opportunities_router, "geocode_address", fake_geocode_address)
+
+    curator_user = models.User(
+        email="curator-geocode@example.com",
+        hashed_password="hash",
+        display_name="Curator Geocode",
+        role="curator",
+        is_active=True,
+        is_verified=True,
+    )
+    employer_user = models.User(
+        email="employer-geocode@example.com",
+        hashed_password="hash",
+        display_name="Employer Geocode",
+        role="employer",
+        is_active=True,
+        is_verified=True,
+    )
+    db_session.add_all([curator_user, employer_user])
+    db_session.commit()
+    db_session.refresh(curator_user)
+    db_session.refresh(employer_user)
+
+    opportunity = models.Opportunity(
+        employer_id=employer_user.id,
+        title="Remote card with address",
+        description="Карточка была создана до исправления ключа геокодера и пока не имеет координат.",
+        type="job",
+        work_format="remote",
+        location="Москва, Лаврушинский переулок, 10",
+        lat=None,
+        lng=None,
+        salary_range="150 000 рублей",
+        is_active=True,
+    )
+    db_session.add(opportunity)
+    db_session.commit()
+    db_session.refresh(opportunity)
+
+    token = create_access_token({"sub": curator_user.email, "role": curator_user.role})
+    response = client.patch(
+        f"/curator/opportunities/{opportunity.id}",
+        headers=auth_headers(token),
+        json={"is_active": True},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["lat"] == 55.744
+    assert response.json()["lng"] == 37.62
+    assert geocoded_locations == ["Москва, Лаврушинский переулок, 10"]
 
 
 def test_curator_can_update_applicant_profile(client, db_session):

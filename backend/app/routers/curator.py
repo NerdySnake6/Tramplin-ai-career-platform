@@ -8,7 +8,11 @@ from sqlalchemy.orm import Session, joinedload
 from app import auth, models, schemas
 from app.database import get_db
 from app.dependencies import require_roles
-from app.routers.opportunities import normalize_validated_expires_at
+from app.routers.opportunities import (
+    normalize_validated_expires_at,
+    resolve_coordinates,
+    should_geocode,
+)
 
 
 router = APIRouter(prefix="/curator", tags=["curator"])
@@ -222,6 +226,21 @@ def update_opportunity(
     update_data = payload.model_dump(exclude_unset=True)
     if "expires_at" in update_data:
         update_data["expires_at"] = normalize_validated_expires_at(update_data["expires_at"])
+
+    old_location = opportunity.location
+    old_work_format = opportunity.work_format
+    location_changed = "location" in update_data and update_data["location"] != old_location
+    work_format_changed = "work_format" in update_data and update_data["work_format"] != old_work_format
+    active_location = update_data.get("location", old_location)
+    active_work_format = update_data.get("work_format", old_work_format)
+
+    if not should_geocode(active_location, active_work_format):
+        update_data["lat"] = None
+        update_data["lng"] = None
+    elif location_changed or work_format_changed or opportunity.lat is None or opportunity.lng is None:
+        lat, lng = resolve_coordinates(active_location, active_work_format, None, None)
+        update_data["lat"] = lat
+        update_data["lng"] = lng
 
     for field, value in update_data.items():
         setattr(opportunity, field, value)

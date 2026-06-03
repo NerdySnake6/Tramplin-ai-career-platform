@@ -1554,6 +1554,10 @@ body {
     border-color: #0d6efd;
 }
 
+.tag-choice.readonly {
+    cursor: default;
+}
+
 .tag-library {
     display: flex;
     flex-wrap: wrap;

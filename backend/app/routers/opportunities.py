@@ -37,8 +37,6 @@ def should_geocode(location: Optional[str], work_format: Optional[str]) -> bool:
     """Определяет, нужно ли выполнять геокодирование локации."""
     if not location:
         return False
-    if work_format == "remote":
-        return False
     loc_lower = location.lower()
     if "удален" in loc_lower or "remote" in loc_lower or "онлайн" in loc_lower or "online" in loc_lower:
         return False
@@ -297,7 +295,7 @@ def update_opportunity(
     active_location = update_data.get("location", old_location)
     active_work_format = update_data.get("work_format", old_work_format)
 
-    if active_work_format == "remote":
+    if not should_geocode(active_location, active_work_format):
         update_data["lat"] = None
         update_data["lng"] = None
     elif location_changed or work_format_changed or opp.lat is None or opp.lng is None or "lat" in update_data or "lng" in update_data:
@@ -335,4 +333,3 @@ def delete_opportunity(
     db.delete(opp)
     db.commit()
     return {"ok": True}
-
