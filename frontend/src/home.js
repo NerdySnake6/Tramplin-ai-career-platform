@@ -355,25 +355,11 @@ export function createHomeController({
                 if (!filters.tagIds.every((tagId) => opportunityTagIds.includes(tagId))) return false;
             }
             if (filters.salary) {
-                const salaryStr = opportunity.salary_range;
-                if (!salaryStr) return false;
-
-                const parseSalary = (str) => {
-                    const clean = str.replace(/\s+/g, '');
-                    const numbers = clean.match(/\d+/g);
-                    if (!numbers || !numbers.length) return 0;
-                    return Math.max(...numbers.map(Number));
-                };
-
-                const salaryValue = parseSalary(salaryStr);
                 if (filters.salary === 'paid') {
-                    const unpaidKeywords = ['неоплач', 'без оплаты', 'не оплач', 'unpaid'];
-                    const isExplicitlyUnpaid = unpaidKeywords.some((keyword) =>
-                        salaryStr.toLowerCase().includes(keyword)
-                    );
-                    if (isExplicitlyUnpaid || salaryValue <= 0) return false;
+                    if (!opportunity.is_paid) return false;
                 } else {
                     const minRequired = Number(filters.salary);
+                    const salaryValue = opportunity.salary_max ?? opportunity.salary_min ?? 0;
                     if (salaryValue < minRequired) return false;
                 }
             }

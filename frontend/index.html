@@ -1025,7 +1025,13 @@
                                 <div id="curatorOpportunityTags" class="tag-selector">
                                     <span class="text-muted small">Теги не указаны.</span>
                                 </div>
-                                <div class="form-text">Куратор видит теги карточки для проверки релевантности и публичной фильтрации.</div>
+                                <div class="form-text">Куратор может поправить теги, чтобы карточка корректно попадала в публичные фильтры.</div>
+                            </div>
+                            <div class="col-12">
+                                <div class="d-flex flex-wrap align-items-center gap-2">
+                                    <button type="button" class="btn btn-outline-primary btn-sm" id="curatorOpportunityGeocodeBtn">Повторить геокодинг</button>
+                                    <span class="small text-muted" id="curatorOpportunityGeocodeStatus">Координаты проверяются автоматически при сохранении адреса.</span>
+                                </div>
                             </div>
                             <div class="col-12">
                                 <div class="ai-helper-panel">
@@ -1036,6 +1042,7 @@
                                         </div>
                                         <button type="button" class="btn btn-sm btn-outline-primary" id="curatorOpportunityAiReviewBtn">AI-проверка</button>
                                     </div>
+                                    <div class="small text-muted mt-2 d-none" id="curatorOpportunityAiHistory"></div>
                                     <div class="small mt-2 d-none" id="curatorOpportunityAiReviewResult"></div>
                                 </div>
                             </div>

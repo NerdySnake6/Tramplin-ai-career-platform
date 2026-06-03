@@ -98,7 +98,7 @@ def test_employer_can_use_opportunity_assist(client, db_session, monkeypatch):
     enable_ai(monkeypatch)
     assert db_session.query(models.Tag).filter(models.Tag.name.in_(["Python", "Junior"])).count() == 2
 
-    def fake_chat_json(messages, **_):
+    async def fake_chat_json(messages, **_):
         assert "Доступные теги" in messages[-1]["content"]
         return {
             "description": "Стажировка для junior-разработчика с практикой Python, наставником и понятными задачами.",
@@ -107,7 +107,7 @@ def test_employer_can_use_opportunity_assist(client, db_session, monkeypatch):
             "warnings": ["Уточните длительность стажировки."],
         }
 
-    monkeypatch.setattr(ai_router.ai_service, "call_chat_json", fake_chat_json)
+    monkeypatch.setattr(ai_router.ai_service, "call_chat_json_async", fake_chat_json)
     headers = register_and_login(client, email="ai-employer@example.com", role="employer")
 
     response = client.post(
@@ -152,7 +152,10 @@ def test_applicant_cannot_use_opportunity_assist(client, monkeypatch):
 def test_invalid_ai_json_returns_bad_gateway(client, monkeypatch):
     """Проверяет, что невалидный структурный ответ AI не ломает backend."""
     enable_ai(monkeypatch)
-    monkeypatch.setattr(ai_router.ai_service, "call_chat_json", lambda *_args, **_kwargs: {"unexpected": "shape"})
+    async def fake_invalid_chat_json(*_args, **_kwargs):
+        return {"unexpected": "shape"}
+
+    monkeypatch.setattr(ai_router.ai_service, "call_chat_json_async", fake_invalid_chat_json)
     headers = register_and_login(client, email="bad-ai-employer@example.com", role="employer")
 
     response = client.post(
@@ -188,7 +191,7 @@ def test_curator_can_request_moderation_review(client, db_session, monkeypatch):
     db_session.add(opportunity)
     db_session.commit()
 
-    def fake_moderation_chat_json(messages, **_kwargs):
+    async def fake_moderation_chat_json(messages, **_kwargs):
         assert "Купим банковские карты" in messages[-1]["content"]
         assert "illegal_finance" in messages[-1]["content"]
         assert "Статус публикации: неактивна" in messages[-1]["content"]
@@ -206,7 +209,7 @@ def test_curator_can_request_moderation_review(client, db_session, monkeypatch):
             ],
         }
 
-    monkeypatch.setattr(ai_router.ai_service, "call_chat_json", fake_moderation_chat_json)
+    monkeypatch.setattr(ai_router.ai_service, "call_chat_json_async", fake_moderation_chat_json)
     headers = login_existing_user(client, email=curator.email)
 
     response = client.post(
@@ -255,10 +258,10 @@ def test_moderation_review_returns_rule_fallback_when_ai_fails(client, db_sessio
     db_session.add(opportunity)
     db_session.commit()
 
-    def fail_ai(*_args, **_kwargs):
+    async def fail_ai(*_args, **_kwargs):
         raise ai_router.ai_service.AIServiceError("timeout")
 
-    monkeypatch.setattr(ai_router.ai_service, "call_chat_json", fail_ai)
+    monkeypatch.setattr(ai_router.ai_service, "call_chat_json_async", fail_ai)
     headers = login_existing_user(client, email=curator.email)
 
     response = client.post(
@@ -319,15 +322,14 @@ def test_applicant_can_generate_cover_letter(client, db_session, monkeypatch):
     db_session.add(opportunity)
     db_session.commit()
 
-    monkeypatch.setattr(
-        ai_router.ai_service,
-        "call_chat_json",
-        lambda *_args, **_kwargs: {
+    async def fake_cover_letter_chat_json(*_args, **_kwargs):
+        return {
             "cover_letter": "Здравствуйте! Хочу откликнуться на стажировку, потому что развиваюсь во фронтенде и готов быстро учиться.",
             "fit_reasons": ["Есть мотивация развиваться", "Подходит формат"],
             "gaps": ["Уточнить стек проекта"],
-        },
-    )
+        }
+
+    monkeypatch.setattr(ai_router.ai_service, "call_chat_json_async", fake_cover_letter_chat_json)
 
     response = client.post(
         "/ai/cover-letter",

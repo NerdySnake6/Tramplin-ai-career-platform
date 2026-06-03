@@ -112,6 +112,7 @@ let handleCuratorUserSubmit;
 let handleCuratorCreateSubmit;
 let handleCuratorOpportunitySubmit;
 let handleCuratorOpportunityAiReview;
+let handleCuratorOpportunityGeocode;
 
 const mapController = createMapController({
     apiKey: YANDEX_API_KEY,
@@ -417,6 +418,7 @@ const curatorController = createCuratorController({
     state,
     renderWorkspaceHero,
     refreshFieldCounters,
+    renderTagChoices,
     loadCuratorData: () => loadCuratorData(),
     loadOpportunities: () => loadOpportunities(),
     getCuratorUserModal: () => curatorUserModal,
@@ -430,6 +432,7 @@ handleCuratorUserSubmit = curatorController.handleCuratorUserSubmit;
 handleCuratorCreateSubmit = curatorController.handleCuratorCreateSubmit;
 handleCuratorOpportunitySubmit = curatorController.handleCuratorOpportunitySubmit;
 handleCuratorOpportunityAiReview = curatorController.handleCuratorOpportunityAiReview;
+handleCuratorOpportunityGeocode = curatorController.handleCuratorOpportunityGeocode;
 
 function visibleViews() {
     const views = ['home'];
@@ -1127,6 +1130,7 @@ function buildOpportunityQueryParams() {
     if (filters.workFormat) params.set('work_format', filters.workFormat);
     if (filters.location) params.set('location', filters.location);
     if (filters.search) params.set('query', filters.search);
+    if (filters.salary) params.set('salary_filter', filters.salary);
     filters.tagIds.forEach((tagId) => {
         params.append('tag_ids', String(tagId));
     });
@@ -1708,6 +1712,9 @@ function bindEvents() {
     el('curatorOpportunityForm').addEventListener('submit', handleCuratorOpportunitySubmit);
     el('curatorOpportunityAiReviewBtn').addEventListener('click', () => {
         void handleCuratorOpportunityAiReview();
+    });
+    el('curatorOpportunityGeocodeBtn').addEventListener('click', () => {
+        void handleCuratorOpportunityGeocode();
     });
     el('openCuratorCreateBtn').addEventListener('click', () => {
         el('curatorCreateForm').reset();

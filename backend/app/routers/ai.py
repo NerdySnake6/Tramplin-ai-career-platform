@@ -4,7 +4,9 @@ from __future__ import annotations
 
 from collections import defaultdict, deque
 from datetime import UTC, datetime, timedelta
+import json
 import re
+from time import perf_counter
 from typing import Any, Iterable, NoReturn
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -259,6 +261,32 @@ def merge_moderation_response(
     )
 
 
+def save_moderation_review_history(
+    db: Session,
+    *,
+    opportunity_id: int,
+    reviewer_id: int,
+    result: schemas.AIModerationReviewResponse,
+    duration_ms: int,
+) -> None:
+    """Сохраняет результат AI-проверки для аудита куратора."""
+    settings = ai_service.get_ai_settings()
+    review = models.AIModerationReview(
+        opportunity_id=opportunity_id,
+        reviewer_id=reviewer_id,
+        risk_level=result.risk_level,
+        risk_sources=json.dumps(result.risk_sources, ensure_ascii=False),
+        rule_matches=json.dumps(
+            [match.model_dump() for match in result.rule_matches],
+            ensure_ascii=False,
+        ),
+        model=settings.model,
+        duration_ms=duration_ms,
+    )
+    db.add(review)
+    db.commit()
+
+
 def match_suggested_tags(suggested_names: list[str], tags: list[models.Tag]) -> list[schemas.AITagSuggestion]:
     """Сопоставляет предложенные моделью названия с существующими тегами."""
     by_name = {tag.name.casefold(): tag for tag in tags}
@@ -393,7 +421,7 @@ def get_ai_status():
 
 
 @router.post("/opportunity-assist", response_model=schemas.AIOpportunityAssistResponse)
-def assist_opportunity(
+async def assist_opportunity(
     payload: schemas.AIOpportunityAssistRequest,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(require_roles("employer", "curator", "admin")),
@@ -402,7 +430,7 @@ def assist_opportunity(
     check_ai_rate_limit(current_user)
     tags = db.query(models.Tag).order_by(models.Tag.category.asc(), models.Tag.name.asc()).all()
     try:
-        raw = ai_service.call_chat_json(
+        raw = await ai_service.call_chat_json_async(
             opportunity_prompt(payload, tags),
             response_schema=OPPORTUNITY_ASSIST_SCHEMA,
             schema_name="opportunity_assist",
@@ -426,7 +454,7 @@ def assist_opportunity(
 
 
 @router.post("/moderation-review", response_model=schemas.AIModerationReviewResponse)
-def review_moderation(
+async def review_moderation(
     payload: schemas.AIModerationReviewRequest,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(require_roles("curator", "admin")),
@@ -463,30 +491,55 @@ def review_moderation(
         for match in rule_matches
     ]
 
+    started_at = perf_counter()
     try:
-        raw = ai_service.call_chat_json(
+        raw = await ai_service.call_chat_json_async(
             moderation_prompt(opportunity, payload, rule_matches),
             response_schema=MODERATION_REVIEW_SCHEMA,
             schema_name="moderation_review",
         )
         raw = clean_ai_payload(raw)
         parsed = schemas.AIModerationReviewResponse.model_validate(raw)
-        return merge_moderation_response(parsed, rule_match_payload)
+        result = merge_moderation_response(parsed, rule_match_payload)
+        save_moderation_review_history(
+            db,
+            opportunity_id=opportunity.id,
+            reviewer_id=current_user.id,
+            result=result,
+            duration_ms=round((perf_counter() - started_at) * 1000),
+        )
+        return result
     except ValidationError as exc:
         if rule_match_payload:
-            return rule_only_moderation_response(rule_match_payload, ai_unavailable=True)
+            result = rule_only_moderation_response(rule_match_payload, ai_unavailable=True)
+            save_moderation_review_history(
+                db,
+                opportunity_id=opportunity.id,
+                reviewer_id=current_user.id,
+                result=result,
+                duration_ms=round((perf_counter() - started_at) * 1000),
+            )
+            return result
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail="AI вернул JSON без ожидаемых полей.",
         ) from exc
     except ai_service.AIServiceError as exc:
         if rule_match_payload:
-            return rule_only_moderation_response(rule_match_payload, ai_unavailable=True)
+            result = rule_only_moderation_response(rule_match_payload, ai_unavailable=True)
+            save_moderation_review_history(
+                db,
+                opportunity_id=opportunity.id,
+                reviewer_id=current_user.id,
+                result=result,
+                duration_ms=round((perf_counter() - started_at) * 1000),
+            )
+            return result
         handle_ai_error(exc)
 
 
 @router.post("/cover-letter", response_model=schemas.AICoverLetterResponse)
-def generate_cover_letter(
+async def generate_cover_letter(
     payload: schemas.AICoverLetterRequest,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(require_roles("applicant")),
@@ -512,7 +565,7 @@ def generate_cover_letter(
         raise HTTPException(status_code=404, detail="Opportunity not found")
 
     try:
-        raw = ai_service.call_chat_json(
+        raw = await ai_service.call_chat_json_async(
             cover_letter_prompt(opportunity, applicant),
             response_schema=COVER_LETTER_SCHEMA,
             schema_name="cover_letter",

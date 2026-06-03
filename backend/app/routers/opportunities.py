@@ -18,6 +18,7 @@ from app.opportunity_visibility import (
     normalize_expiration_datetime,
     public_opportunity_filters,
 )
+from app.salary import matches_salary_filter
 
 router = APIRouter(prefix="/opportunities", tags=["opportunities"])
 logger = logging.getLogger(__name__)
@@ -159,6 +160,7 @@ def list_opportunities(
     work_format: Optional[str] = Query(None, description="Filter by work format"),
     location: Optional[str] = Query(None, description="Filter by location (city)"),
     tag_ids: Optional[List[int]] = Query(None, description="Filter by tag IDs"),
+    salary_filter: Optional[str] = Query(None, description="Filter by normalized salary: paid, 50000 or 100000"),
     db: Session = Depends(get_db)
 ):
     """Возвращает активные публичные возможности с учетом фильтров."""
@@ -189,11 +191,28 @@ def list_opportunities(
                 models.Opportunity.title.ilike(search),
                 models.Opportunity.description.ilike(search),
                 models.Opportunity.location.ilike(search),
+                models.Opportunity.salary_range.ilike(search),
                 models.User.display_name.ilike(search),
                 models.EmployerProfile.company_name.ilike(search),
                 models.Opportunity.tags.any(models.Tag.name.ilike(search)),
             )
         )
+
+    if salary_filter:
+        if salary_filter not in {"paid", "50000", "100000"}:
+            raise HTTPException(status_code=422, detail="Unsupported salary filter")
+
+        opportunities = (
+            opportunities_query
+            .order_by(models.Opportunity.published_at.desc(), models.Opportunity.id.desc())
+            .all()
+        )
+        filtered = [
+            opportunity
+            for opportunity in opportunities
+            if matches_salary_filter(opportunity.salary_range, salary_filter)
+        ]
+        return filtered[skip:skip + limit]
     
     opportunities = (
         opportunities_query

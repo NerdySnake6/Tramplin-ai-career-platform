@@ -58,6 +58,9 @@ class User(Base):
     
     # Вакансии/мероприятия созданные пользователем (для работодателей)
     opportunities: Mapped[List["Opportunity"]] = relationship(back_populates="employer")
+
+    # AI-проверки, запущенные пользователем как куратором или администратором
+    ai_moderation_reviews: Mapped[List["AIModerationReview"]] = relationship(back_populates="reviewer")
     
     # Отклики пользователя (для соискателей)
     responses: Mapped[List["Response"]] = relationship(back_populates="applicant")
@@ -181,6 +184,7 @@ class Opportunity(Base):
     tags: Mapped[List["Tag"]] = relationship(secondary=opportunity_tag, back_populates="opportunities")
     responses: Mapped[List["Response"]] = relationship(back_populates="opportunity")
     recommendations: Mapped[List["Recommendation"]] = relationship(back_populates="opportunity")
+    ai_moderation_reviews: Mapped[List["AIModerationReview"]] = relationship(back_populates="opportunity")
 
     @property
     def employer_name(self) -> str:
@@ -219,6 +223,24 @@ class Response(Base):
     # Связи
     applicant: Mapped["User"] = relationship(back_populates="responses")
     opportunity: Mapped["Opportunity"] = relationship(back_populates="responses")
+
+
+class AIModerationReview(Base):
+    """Сохраненная AI-проверка карточки возможности для аудита куратора."""
+    __tablename__ = "ai_moderation_reviews"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    opportunity_id: Mapped[int] = mapped_column(ForeignKey("opportunities.id"), index=True)
+    reviewer_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    risk_level: Mapped[str] = mapped_column(String(20))
+    risk_sources: Mapped[str] = mapped_column(Text, default="[]")
+    rule_matches: Mapped[str] = mapped_column(Text, default="[]")
+    model: Mapped[str] = mapped_column(String(120))
+    duration_ms: Mapped[Optional[int]] = mapped_column(nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now_naive)
+
+    opportunity: Mapped["Opportunity"] = relationship(back_populates="ai_moderation_reviews")
+    reviewer: Mapped["User"] = relationship(back_populates="ai_moderation_reviews")
 
 
 class Contact(Base):

@@ -1,5 +1,6 @@
 """Маршруты для кабинета куратора и модерации платформы."""
 
+import json
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -8,6 +9,7 @@ from sqlalchemy.orm import Session, joinedload
 from app import auth, models, schemas
 from app.database import get_db
 from app.dependencies import require_roles
+from app.geocoder import GeocodingError, geocode_address, geocoder_is_configured
 from app.routers.opportunities import (
     normalize_validated_expires_at,
     resolve_coordinates,
@@ -16,6 +18,47 @@ from app.routers.opportunities import (
 
 
 router = APIRouter(prefix="/curator", tags=["curator"])
+
+
+def curator_opportunity_out(opportunity: models.Opportunity) -> schemas.CuratorOpportunityOut:
+    """Возвращает публичную схему карточки для кабинета куратора."""
+    return schemas.CuratorOpportunityOut(
+        id=opportunity.id,
+        employer_id=opportunity.employer_id,
+        employer_name=(
+            opportunity.employer.employer_profile.company_name
+            if opportunity.employer and opportunity.employer.employer_profile
+            else opportunity.employer.display_name if opportunity.employer else "Работодатель"
+        ),
+        title=opportunity.title,
+        description=opportunity.description,
+        type=opportunity.type,
+        work_format=opportunity.work_format,
+        location=opportunity.location,
+        lat=opportunity.lat,
+        lng=opportunity.lng,
+        salary_range=opportunity.salary_range,
+        expires_at=opportunity.expires_at,
+        event_date=opportunity.event_date,
+        is_active=opportunity.is_active,
+        published_at=opportunity.published_at,
+        tags=opportunity.tags,
+    )
+
+
+def moderation_review_history_out(review: models.AIModerationReview) -> schemas.AIModerationReviewHistoryOut:
+    """Преобразует сохраненную AI-проверку в API-схему с JSON-полями."""
+    return schemas.AIModerationReviewHistoryOut(
+        id=review.id,
+        opportunity_id=review.opportunity_id,
+        reviewer_id=review.reviewer_id,
+        risk_level=review.risk_level,
+        risk_sources=json.loads(review.risk_sources or "[]"),
+        rule_matches=json.loads(review.rule_matches or "[]"),
+        model=review.model,
+        duration_ms=review.duration_ms,
+        created_at=review.created_at,
+    )
 
 
 @router.post("/curators", response_model=schemas.UserOut, status_code=201)
@@ -176,31 +219,7 @@ def list_opportunities(
         )
 
     opportunities = opportunities_query.offset(skip).limit(limit).all()
-    return [
-        schemas.CuratorOpportunityOut(
-            id=opportunity.id,
-            employer_id=opportunity.employer_id,
-            employer_name=(
-                opportunity.employer.employer_profile.company_name
-                if opportunity.employer and opportunity.employer.employer_profile
-                else opportunity.employer.display_name if opportunity.employer else "Работодатель"
-            ),
-            title=opportunity.title,
-            description=opportunity.description,
-            type=opportunity.type,
-            work_format=opportunity.work_format,
-            location=opportunity.location,
-            lat=opportunity.lat,
-            lng=opportunity.lng,
-            salary_range=opportunity.salary_range,
-            expires_at=opportunity.expires_at,
-            event_date=opportunity.event_date,
-            is_active=opportunity.is_active,
-            published_at=opportunity.published_at,
-            tags=opportunity.tags,
-        )
-        for opportunity in opportunities
-    ]
+    return [curator_opportunity_out(opportunity) for opportunity in opportunities]
 
 
 @router.patch("/opportunities/{opp_id}", response_model=schemas.CuratorOpportunityOut)
@@ -223,7 +242,7 @@ def update_opportunity(
     if not opportunity:
         raise HTTPException(status_code=404, detail="Opportunity not found")
 
-    update_data = payload.model_dump(exclude_unset=True)
+    update_data = payload.model_dump(exclude_unset=True, exclude={"tag_ids"})
     if "expires_at" in update_data:
         update_data["expires_at"] = normalize_validated_expires_at(update_data["expires_at"])
 
@@ -245,28 +264,75 @@ def update_opportunity(
     for field, value in update_data.items():
         setattr(opportunity, field, value)
 
+    if payload.tag_ids is not None:
+        tags = db.query(models.Tag).filter(models.Tag.id.in_(payload.tag_ids)).all()
+        opportunity.tags = tags
+
     db.commit()
     db.refresh(opportunity)
 
-    return schemas.CuratorOpportunityOut(
-        id=opportunity.id,
-        employer_id=opportunity.employer_id,
-        employer_name=(
-            opportunity.employer.employer_profile.company_name
-            if opportunity.employer and opportunity.employer.employer_profile
-            else opportunity.employer.display_name if opportunity.employer else "Работодатель"
-        ),
-        title=opportunity.title,
-        description=opportunity.description,
-        type=opportunity.type,
-        work_format=opportunity.work_format,
-        location=opportunity.location,
-        lat=opportunity.lat,
-        lng=opportunity.lng,
-        salary_range=opportunity.salary_range,
-        expires_at=opportunity.expires_at,
-        event_date=opportunity.event_date,
-        is_active=opportunity.is_active,
-        published_at=opportunity.published_at,
-        tags=opportunity.tags,
+    return curator_opportunity_out(opportunity)
+
+
+@router.post("/opportunities/{opp_id}/geocode", response_model=schemas.CuratorOpportunityOut)
+def retry_opportunity_geocoding(
+    opp_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(require_roles("curator", "admin")),
+):
+    """Повторно геокодирует карточку по текущей локации по запросу куратора."""
+    opportunity = (
+        db.query(models.Opportunity)
+        .options(
+            joinedload(models.Opportunity.tags),
+            joinedload(models.Opportunity.employer).joinedload(models.User.employer_profile),
+        )
+        .filter(models.Opportunity.id == opp_id)
+        .first()
     )
+    if not opportunity:
+        raise HTTPException(status_code=404, detail="Opportunity not found")
+    if not should_geocode(opportunity.location, opportunity.work_format):
+        opportunity.lat = None
+        opportunity.lng = None
+        db.commit()
+        db.refresh(opportunity)
+        return curator_opportunity_out(opportunity)
+    if not geocoder_is_configured():
+        raise HTTPException(status_code=503, detail="Yandex Geocoder API key не настроен на сервере.")
+
+    try:
+        result = geocode_address(opportunity.location)
+    except GeocodingError as exc:
+        raise HTTPException(status_code=502, detail=f"Не удалось геокодировать адрес: {exc}") from exc
+
+    if not result:
+        raise HTTPException(status_code=404, detail="Геокодер не нашел координаты для текущей локации.")
+
+    opportunity.lat = result["lat"]
+    opportunity.lng = result["lng"]
+    db.commit()
+    db.refresh(opportunity)
+    return curator_opportunity_out(opportunity)
+
+
+@router.get("/opportunities/{opp_id}/ai-reviews", response_model=List[schemas.AIModerationReviewHistoryOut])
+def list_opportunity_ai_reviews(
+    opp_id: int,
+    limit: int = Query(default=3, ge=1, le=10),
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(require_roles("curator", "admin")),
+):
+    """Возвращает последние сохраненные AI-проверки карточки."""
+    exists = db.query(models.Opportunity.id).filter(models.Opportunity.id == opp_id).first()
+    if not exists:
+        raise HTTPException(status_code=404, detail="Opportunity not found")
+
+    reviews = (
+        db.query(models.AIModerationReview)
+        .filter(models.AIModerationReview.opportunity_id == opp_id)
+        .order_by(models.AIModerationReview.created_at.desc(), models.AIModerationReview.id.desc())
+        .limit(limit)
+        .all()
+    )
+    return [moderation_review_history_out(review) for review in reviews]

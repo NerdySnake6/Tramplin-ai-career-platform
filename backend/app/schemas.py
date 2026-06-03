@@ -2,7 +2,9 @@
 
 from datetime import datetime
 from typing import Optional, List, Literal
-from pydantic import BaseModel, EmailStr, Field, ConfigDict
+from pydantic import BaseModel, EmailStr, Field, ConfigDict, computed_field
+
+from app.salary import parse_salary_range
 
 class UserBase(BaseModel):
     email: EmailStr
@@ -174,6 +176,24 @@ class OpportunityOut(OpportunityBase):
 
     model_config = ConfigDict(from_attributes=True)
 
+    @computed_field
+    @property
+    def salary_min(self) -> Optional[int]:
+        """Возвращает нижнюю границу зарплаты, если ее удалось извлечь."""
+        return parse_salary_range(self.salary_range).min_value
+
+    @computed_field
+    @property
+    def salary_max(self) -> Optional[int]:
+        """Возвращает верхнюю границу зарплаты, если ее удалось извлечь."""
+        return parse_salary_range(self.salary_range).max_value
+
+    @computed_field
+    @property
+    def is_paid(self) -> bool:
+        """Возвращает признак оплачиваемой карточки."""
+        return parse_salary_range(self.salary_range).is_paid
+
 
 class CuratorOpportunityOut(OpportunityOut):
     employer_name: str
@@ -189,6 +209,7 @@ class CuratorOpportunityUpdate(BaseModel):
     expires_at: Optional[datetime] = None
     event_date: Optional[datetime] = None
     is_active: Optional[bool] = None
+    tag_ids: Optional[List[int]] = None
 
 
 class GeocodeResult(BaseModel):
@@ -433,6 +454,22 @@ class AIModerationReviewResponse(BaseModel):
     highlights: list[AIModerationHighlight] = Field(default_factory=list, max_length=10)
     rule_matches: list[ModerationRuleMatch] = Field(default_factory=list, max_length=12)
     risk_sources: list[Literal["rules", "ai"]] = Field(default_factory=list, max_length=2)
+
+
+class AIModerationReviewHistoryOut(BaseModel):
+    """Сохраненная история AI-проверки карточки возможности."""
+
+    id: int
+    opportunity_id: int
+    reviewer_id: int
+    risk_level: Literal["low", "medium", "high"]
+    risk_sources: list[str] = Field(default_factory=list)
+    rule_matches: list[dict] = Field(default_factory=list)
+    model: str
+    duration_ms: Optional[int] = None
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class AICoverLetterRequest(BaseModel):

@@ -15,7 +15,7 @@ from app import database, models
 
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
-HEAD_REVISION = "b7c4e2d1a9f0"
+HEAD_REVISION = "c8f2a1d4b6e9"
 
 
 def build_alembic_config(db_url: str) -> Config:

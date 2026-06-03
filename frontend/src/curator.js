@@ -8,6 +8,7 @@ import {
     normalizeText,
     normalizeUrl,
     OPPORTUNITY_EXPIRATION_VALIDATION_MESSAGE,
+    selectedTagIdsFromContainer,
     showNotice,
     toDateTimeLocalValue,
 } from './utils.js';
@@ -17,6 +18,7 @@ export function createCuratorController({
     state,
     renderWorkspaceHero,
     refreshFieldCounters,
+    renderTagChoices,
     loadCuratorData,
     loadOpportunities,
     getCuratorUserModal,
@@ -80,6 +82,33 @@ export function createCuratorController({
         await loadCuratorData();
         await loadOpportunities();
         showNotice('success', 'Карточка обновлена.');
+    }
+
+    async function retryCuratorOpportunityGeocode(opportunityId) {
+        const response = await apiFetch(`/curator/opportunities/${opportunityId}/geocode`, {
+            method: 'POST',
+        });
+
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({ detail: 'Не удалось повторить геокодинг.' }));
+            showNotice('danger', typeof error.detail === 'string' ? error.detail : 'Не удалось повторить геокодинг.');
+            return null;
+        }
+
+        const updated = await response.json();
+        await loadCuratorData();
+        await loadOpportunities();
+        showNotice('success', updated.lat && updated.lng ? 'Координаты карточки обновлены.' : 'Для этой карточки координаты не требуются.');
+        return updated;
+    }
+
+    async function loadCuratorOpportunityAiHistory(opportunityId) {
+        const response = await apiFetch(`/curator/opportunities/${opportunityId}/ai-reviews?limit=3`);
+        if (!response.ok) {
+            renderCuratorOpportunityAiHistory([]);
+            return;
+        }
+        renderCuratorOpportunityAiHistory(await response.json());
     }
 
     function getFilteredCuratorUsers() {
@@ -404,26 +433,46 @@ export function createCuratorController({
         el('curatorOpportunityDescription').value = opportunity.description || '';
         el('curatorOpportunityActive').checked = Boolean(opportunity.is_active);
         renderCuratorOpportunityTags(opportunity.tags || []);
+        renderCuratorOpportunityGeocodeStatus(opportunity);
+        renderCuratorOpportunityAiHistory([]);
         renderCuratorOpportunityAiReview(null);
+        void loadCuratorOpportunityAiHistory(opportunityId);
         refreshFieldCounters();
         getCuratorOpportunityModal().show();
     }
 
     function renderCuratorOpportunityTags(tags) {
-        const container = el('curatorOpportunityTags');
+        const selectedIds = Array.isArray(tags) ? tags.map((tag) => tag.id) : [];
+        renderTagChoices('curatorOpportunityTags', selectedIds);
+    }
+
+    function renderCuratorOpportunityGeocodeStatus(opportunity) {
+        const status = el('curatorOpportunityGeocodeStatus');
+        if (!status) return;
+
+        const hasCoordinates = opportunity?.lat != null && opportunity?.lng != null;
+        status.textContent = hasCoordinates
+            ? `Координаты: ${Number(opportunity.lat).toFixed(5)}, ${Number(opportunity.lng).toFixed(5)}`
+            : 'Координаты пока не заданы. Можно повторить геокодинг после исправления ключа или адреса.';
+    }
+
+    function renderCuratorOpportunityAiHistory(reviews) {
+        const container = el('curatorOpportunityAiHistory');
         if (!container) return;
 
         container.innerHTML = '';
-        if (!Array.isArray(tags) || !tags.length) {
-            container.appendChild(createEl('span', 'text-muted small', 'Теги не указаны.'));
+        if (!Array.isArray(reviews) || !reviews.length) {
+            container.classList.add('d-none');
             return;
         }
 
-        tags.forEach((tag) => {
-            const chip = createEl('span', 'tag-choice active readonly', tag.name);
-            chip.title = 'Тег карточки';
-            container.appendChild(chip);
-        });
+        const latest = reviews[0];
+        const createdAt = new Date(latest.created_at).toLocaleString('ru-RU');
+        const sources = Array.isArray(latest.risk_sources) && latest.risk_sources.length
+            ? latest.risk_sources.join(' + ')
+            : 'нет источников';
+        container.classList.remove('d-none');
+        container.textContent = `Последняя AI-проверка: ${riskLabel(latest.risk_level)}, ${createdAt}, ${latest.model}, ${latest.duration_ms ?? '-'} мс, источники: ${sources}.`;
     }
 
     function highlightLabel(level) {
@@ -431,6 +480,13 @@ export function createCuratorController({
         if (level === 'suspicious') return 'Подозрительно';
         if (level === 'danger') return 'Опасно';
         return level;
+    }
+
+    function riskLabel(riskLevel) {
+        if (riskLevel === 'low') return 'Низкий риск';
+        if (riskLevel === 'medium') return 'Средний риск';
+        if (riskLevel === 'high') return 'Высокий риск';
+        return riskLevel;
     }
 
     function highlightClass(level) {
@@ -657,6 +713,7 @@ export function createCuratorController({
 
             const result = await response.json();
             renderCuratorOpportunityAiReview(result, payload.description || '');
+            void loadCuratorOpportunityAiHistory(state.pendingCuratorOpportunityId);
             showNotice('success', 'AI подготовил подсказку для ручной модерации.');
         } catch (_error) {
             showNotice('danger', 'AI-проверка временно недоступна.');
@@ -739,9 +796,26 @@ export function createCuratorController({
             expires_at: normalizeText(el('curatorOpportunityExpiresAt').value),
             description: normalizeText(el('curatorOpportunityDescription').value),
             is_active: el('curatorOpportunityActive').checked,
+            tag_ids: selectedTagIdsFromContainer('curatorOpportunityTags'),
         });
 
         getCuratorOpportunityModal().hide();
+    }
+
+    async function handleCuratorOpportunityGeocode() {
+        if (!state.pendingCuratorOpportunityId) return;
+
+        const button = el('curatorOpportunityGeocodeBtn');
+        const previousLabel = button.textContent;
+        button.disabled = true;
+        button.textContent = 'Геокодируем...';
+        try {
+            const updated = await retryCuratorOpportunityGeocode(state.pendingCuratorOpportunityId);
+            if (updated) renderCuratorOpportunityGeocodeStatus(updated);
+        } finally {
+            button.disabled = false;
+            button.textContent = previousLabel;
+        }
     }
 
     return {
@@ -752,5 +826,6 @@ export function createCuratorController({
         handleCuratorCreateSubmit,
         handleCuratorOpportunitySubmit,
         handleCuratorOpportunityAiReview,
+        handleCuratorOpportunityGeocode,
     };
 }

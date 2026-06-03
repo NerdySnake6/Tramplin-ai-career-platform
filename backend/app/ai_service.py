@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import asyncio
 import json
 import logging
 import os
 from time import perf_counter
 from typing import Any
-from urllib import error, request
+
+import httpx
 
 
 DEFAULT_POLZA_API_BASE_URL = "https://polza.ai/api/v1"
@@ -123,59 +125,67 @@ def response_format_for_schema(name: str, schema: dict[str, Any] | None) -> dict
     }
 
 
-def call_chat_json(
+def build_chat_payload(
     messages: list[dict[str, str]],
     *,
     temperature: float = 0.2,
     response_schema: dict[str, Any] | None = None,
     schema_name: str = "tramplin_ai_response",
 ) -> dict[str, Any]:
-    """Отправляет запрос к Polza.ai/OpenAI-compatible API и возвращает JSON-объект."""
-    settings = ensure_ai_ready()
-    endpoint = f"{settings.base_url}/chat/completions"
-    payload = {
+    """Формирует payload для OpenAI-compatible chat completions."""
+    settings = get_ai_settings()
+    return {
         "model": settings.model,
         "messages": messages,
         "temperature": temperature,
         "max_tokens": settings.max_output_tokens,
         "response_format": response_format_for_schema(schema_name, response_schema),
     }
-    data = json.dumps(payload, ensure_ascii=False).encode("utf-8")
-    req = request.Request(
-        endpoint,
-        data=data,
-        headers={
-            "Authorization": f"Bearer {settings.api_key}",
-            "Content-Type": "application/json",
-        },
-        method="POST",
+
+
+async def call_chat_json_async(
+    messages: list[dict[str, str]],
+    *,
+    temperature: float = 0.2,
+    response_schema: dict[str, Any] | None = None,
+    schema_name: str = "tramplin_ai_response",
+) -> dict[str, Any]:
+    """Асинхронно отправляет запрос к AI API и возвращает JSON-объект."""
+    settings = ensure_ai_ready()
+    endpoint = f"{settings.base_url}/chat/completions"
+    payload = build_chat_payload(
+        messages,
+        temperature=temperature,
+        response_schema=response_schema,
+        schema_name=schema_name,
     )
 
     started_at = perf_counter()
     try:
-        with request.urlopen(req, timeout=settings.timeout_seconds) as response:
-            raw_body = response.read().decode("utf-8")
-    except error.HTTPError as exc:
+        async with httpx.AsyncClient(timeout=settings.timeout_seconds) as client:
+            response = await client.post(
+                endpoint,
+                headers={
+                    "Authorization": f"Bearer {settings.api_key}",
+                    "Content-Type": "application/json",
+                },
+                json=payload,
+            )
+            response.raise_for_status()
+            body = response.json()
+    except httpx.HTTPStatusError as exc:
         duration_ms = round((perf_counter() - started_at) * 1000)
         logger.info(
             "ai_request schema=%s model=%s duration_ms=%s success=false error=http_%s",
             schema_name,
             settings.model,
             duration_ms,
-            exc.code,
+            exc.response.status_code,
         )
-        detail = exc.read().decode("utf-8", errors="replace")
-        raise AIServiceError(f"AI API вернул ошибку {exc.code}: {detail[:300]}") from exc
-    except error.URLError as exc:
-        duration_ms = round((perf_counter() - started_at) * 1000)
-        logger.info(
-            "ai_request schema=%s model=%s duration_ms=%s success=false error=url_error",
-            schema_name,
-            settings.model,
-            duration_ms,
-        )
-        raise AIServiceError("AI API временно недоступен.") from exc
-    except TimeoutError as exc:
+        raise AIServiceError(
+            f"AI API вернул ошибку {exc.response.status_code}: {exc.response.text[:300]}"
+        ) from exc
+    except httpx.TimeoutException as exc:
         duration_ms = round((perf_counter() - started_at) * 1000)
         logger.info(
             "ai_request schema=%s model=%s duration_ms=%s success=false error=timeout",
@@ -184,11 +194,28 @@ def call_chat_json(
             duration_ms,
         )
         raise AIServiceError("AI API не ответил за отведенное время.") from exc
+    except httpx.HTTPError as exc:
+        duration_ms = round((perf_counter() - started_at) * 1000)
+        logger.info(
+            "ai_request schema=%s model=%s duration_ms=%s success=false error=http_error",
+            schema_name,
+            settings.model,
+            duration_ms,
+        )
+        raise AIServiceError("AI API временно недоступен.") from exc
+    except ValueError as exc:
+        duration_ms = round((perf_counter() - started_at) * 1000)
+        logger.info(
+            "ai_request schema=%s model=%s duration_ms=%s success=false error=invalid_json",
+            schema_name,
+            settings.model,
+            duration_ms,
+        )
+        raise AIResponseError("AI API вернул ответ не в формате JSON.") from exc
 
     try:
-        body = json.loads(raw_body)
         content = body["choices"][0]["message"]["content"]
-    except (KeyError, IndexError, TypeError, json.JSONDecodeError) as exc:
+    except (KeyError, IndexError, TypeError) as exc:
         duration_ms = round((perf_counter() - started_at) * 1000)
         logger.info(
             "ai_request schema=%s model=%s duration_ms=%s success=false error=unexpected_response",
@@ -207,3 +234,21 @@ def call_chat_json(
         json.dumps(body.get("usage", {}), ensure_ascii=False, sort_keys=True),
     )
     return extract_json_object(content)
+
+
+def call_chat_json(
+    messages: list[dict[str, str]],
+    *,
+    temperature: float = 0.2,
+    response_schema: dict[str, Any] | None = None,
+    schema_name: str = "tramplin_ai_response",
+) -> dict[str, Any]:
+    """Синхронная обертка над async AI-клиентом для тестов и совместимости."""
+    return asyncio.run(
+        call_chat_json_async(
+            messages,
+            temperature=temperature,
+            response_schema=response_schema,
+            schema_name=schema_name,
+        )
+    )

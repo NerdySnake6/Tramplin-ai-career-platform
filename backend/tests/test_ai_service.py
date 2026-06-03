@@ -5,23 +5,23 @@ import json
 from app import ai_service
 
 
+import httpx
+
+
 class FakeResponse:
-    """Минимальный context manager для подмены urllib response."""
+    """Минимальный класс для подмены httpx response."""
 
-    def __init__(self, payload: dict):
+    def __init__(self, payload: dict, status_code: int = 200):
         self.payload = payload
+        self.status_code = status_code
+        self.text = json.dumps(payload)
 
-    def __enter__(self):
-        """Возвращает response-объект."""
-        return self
+    def json(self) -> dict:
+        return self.payload
 
-    def __exit__(self, *_args):
-        """Закрывает fake response без дополнительных действий."""
-        return False
-
-    def read(self):
-        """Возвращает JSON-ответ модели байтами."""
-        return json.dumps(self.payload).encode("utf-8")
+    def raise_for_status(self) -> None:
+        if self.status_code >= 400:
+            raise httpx.HTTPStatusError("Error", request=None, response=self)
 
 
 def test_call_chat_json_sends_model_and_token_limit(monkeypatch):
@@ -32,9 +32,12 @@ def test_call_chat_json_sends_model_and_token_limit(monkeypatch):
     monkeypatch.delenv("POLZA_MODEL", raising=False)
     monkeypatch.delenv("AI_MAX_OUTPUT_TOKENS", raising=False)
 
-    def fake_urlopen(req, timeout):
-        captured["timeout"] = timeout
-        captured["payload"] = json.loads(req.data.decode("utf-8"))
+    async def fake_post(self_client, url, headers=None, **kwargs):
+        captured["url"] = url
+        captured["headers"] = headers
+        captured["payload"] = kwargs.get("json")
+        # Извлекаем таймаут из настроек AsyncClient
+        captured["timeout"] = self_client.timeout.read
         return FakeResponse(
             {
                 "choices": [
@@ -47,7 +50,7 @@ def test_call_chat_json_sends_model_and_token_limit(monkeypatch):
             }
         )
 
-    monkeypatch.setattr(ai_service.request, "urlopen", fake_urlopen)
+    monkeypatch.setattr(httpx.AsyncClient, "post", fake_post)
 
     result = ai_service.call_chat_json(
         [{"role": "user", "content": "test"}],
