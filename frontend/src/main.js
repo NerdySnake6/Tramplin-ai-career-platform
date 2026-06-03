@@ -542,23 +542,54 @@ function buildOpportunityDetailsModal(opportunity) {
     actions.innerHTML = '';
 
     const summary = createEl('div', 'opportunity-details-summary');
-    summary.appendChild(createEl('div', 'detail-meta mb-2', `${opportunity.location}`));
-    summary.appendChild(createEl('p', 'mb-3', opportunity.description));
+    
+    // Premium location pin styling
+    const locationDiv = createEl('div', 'detail-meta-location mb-3');
+    locationDiv.innerHTML = `📍 <span>${opportunity.location}</span>`;
+    summary.appendChild(locationDiv);
 
-    const facts = createEl('div', 'opportunity-details-facts mb-3');
-    facts.appendChild(createEl('div', '', `Публикация: ${formatDate(opportunity.published_at)}`));
-    facts.appendChild(createEl('div', '', `Дата закрытия: ${formatDate(opportunity.expires_at)}`));
+    // Description text
+    const descP = createEl('p', 'mb-4 opportunity-detail-desc', opportunity.description);
+    summary.appendChild(descP);
+
+    // Fact items grid
+    const facts = createEl('div', 'opportunity-details-facts mb-4');
+    
+    const factPub = createEl('div', 'detail-fact-item');
+    factPub.innerHTML = `<span class="detail-fact-icon">📅</span> <span>Публикация: ${formatDate(opportunity.published_at)}</span>`;
+    facts.appendChild(factPub);
+
+    const factExp = createEl('div', 'detail-fact-item');
+    factExp.innerHTML = `<span class="detail-fact-icon">⏳</span> <span>Срок до: ${formatDate(opportunity.expires_at)}</span>`;
+    facts.appendChild(factExp);
+
     if (opportunity.salary_range) {
-        facts.appendChild(createEl('div', '', `Вознаграждение: ${opportunity.salary_range}`));
+        const factSal = createEl('div', 'detail-fact-item');
+        factSal.innerHTML = `<span class="detail-fact-icon">💰</span> <span>Вознаграждение: ${opportunity.salary_range}</span>`;
+        facts.appendChild(factSal);
     }
     summary.appendChild(facts);
 
+    // Tags
     if (Array.isArray(opportunity.tags) && opportunity.tags.length) {
-        const tagsRow = createEl('div', 'd-flex flex-wrap gap-2');
+        const tagsRow = createEl('div', 'd-flex flex-wrap gap-2 mb-3');
         opportunity.tags.forEach((tag) => {
-            tagsRow.appendChild(createEl('span', 'badge text-bg-light', `#${tag.name}`));
+            tagsRow.appendChild(createEl('span', 'detail-tag-badge', `#${tag.name}`));
         });
         summary.appendChild(tagsRow);
+    }
+
+    // Call-to-action banner for non-registered users
+    if (!state.currentUser) {
+        const banner = createEl('div', 'guest-apply-banner mt-4');
+        banner.innerHTML = `
+            <span class="guest-apply-banner-icon">🔑</span>
+            <div class="guest-apply-banner-content">
+                <strong>Хотите откликнуться?</strong>
+                <p class="mb-0">Войдите как соискатель, чтобы отправлять отклики на вакансии и использовать все функции платформы.</p>
+            </div>
+        `;
+        summary.appendChild(banner);
     }
 
     container.appendChild(summary);
@@ -611,8 +642,6 @@ function buildOpportunityDetailsModal(opportunity) {
             openApplyModal(opportunity.id);
         });
         actions.appendChild(applyBtn);
-    } else if (!state.currentUser) {
-        actions.appendChild(createEl('div', 'small text-muted ms-auto', 'Войди как соискатель, чтобы откликнуться на эту возможность.'));
     }
 }
 

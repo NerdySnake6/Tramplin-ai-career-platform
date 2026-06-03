@@ -448,7 +448,7 @@ function renderOpportunitySection(panel, route, opportunity, onNavigate) {
     if (Array.isArray(opportunity.tags) && opportunity.tags.length) {
         const tags = createEl('div', 'public-seo-tags');
         opportunity.tags.forEach((tag) => {
-            tags.appendChild(createEl('span', 'badge text-bg-light', `#${tag.name}`));
+            tags.appendChild(createEl('span', 'card-tag-badge', `#${tag.name}`));
         });
         panel.appendChild(tags);
     }

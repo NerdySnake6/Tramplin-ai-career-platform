@@ -112,7 +112,7 @@ export function createHomeController({
             if (Array.isArray(opportunity.tags) && opportunity.tags.length) {
                 const tagsRow = createEl('div', 'd-flex flex-wrap gap-2 mb-3');
                 opportunity.tags.forEach((tag) => {
-                    tagsRow.appendChild(createEl('span', 'badge text-bg-light', `#${tag.name}`));
+                    tagsRow.appendChild(createEl('span', 'card-tag-badge', `#${tag.name}`));
                 });
                 body.appendChild(tagsRow);
             }
