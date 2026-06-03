@@ -3,7 +3,7 @@
 from datetime import UTC, datetime, timedelta
 
 from app import models
-from app.auth import create_access_token
+from app.auth import create_access_token, get_password_hash
 from app.email_service import EmailDeliveryError
 from app.opportunity_visibility import is_expiration_datetime_allowed, normalize_expiration_datetime
 from app.routers import opportunities as opportunities_router
@@ -195,6 +195,91 @@ def test_registration_requires_email_confirmation_before_login(client):
         password="supersecret",
     )
     assert token
+
+
+def test_user_can_change_password(client):
+    """Проверяет смену пароля для обычного пользователя."""
+    register_response = register_user(
+        client,
+        email="change-password@example.com",
+        password="oldsecret",
+        display_name="Change Password",
+        role="applicant",
+    )
+    assert register_response.status_code == 201
+    token = login_user(client, email="change-password@example.com", password="oldsecret")
+
+    response = client.post(
+        "/auth/change-password",
+        headers=auth_headers(token),
+        json={
+            "current_password": "oldsecret",
+            "new_password": "newsecret",
+        },
+    )
+
+    assert response.status_code == 200
+
+    old_login = client.post(
+        "/auth/login",
+        data={"username": "change-password@example.com", "password": "oldsecret"},
+        headers={"Content-Type": "application/x-www-form-urlencoded"},
+    )
+    assert old_login.status_code == 401
+
+    new_login_token = login_user(client, email="change-password@example.com", password="newsecret")
+    assert new_login_token
+
+
+def test_change_password_rejects_wrong_current_password(client):
+    """Проверяет отказ при неверном текущем пароле."""
+    register_response = register_user(
+        client,
+        email="wrong-current-password@example.com",
+        password="oldsecret",
+        display_name="Wrong Current",
+        role="employer",
+    )
+    assert register_response.status_code == 201
+    token = login_user(client, email="wrong-current-password@example.com", password="oldsecret")
+
+    response = client.post(
+        "/auth/change-password",
+        headers=auth_headers(token),
+        json={
+            "current_password": "badsecret",
+            "new_password": "newsecret",
+        },
+    )
+
+    assert response.status_code == 400
+
+
+def test_admin_cannot_change_password_through_user_endpoint(client, db_session):
+    """Проверяет, что системный администратор не меняет пароль через пользовательский endpoint."""
+    admin_user = models.User(
+        email="admin-password-change@example.com",
+        hashed_password=get_password_hash("oldsecret"),
+        display_name="Admin Password",
+        role="admin",
+        is_active=True,
+        is_verified=True,
+        is_email_verified=True,
+    )
+    db_session.add(admin_user)
+    db_session.commit()
+
+    token = create_access_token({"sub": admin_user.email, "role": admin_user.role})
+    response = client.post(
+        "/auth/change-password",
+        headers=auth_headers(token),
+        json={
+            "current_password": "oldsecret",
+            "new_password": "newsecret",
+        },
+    )
+
+    assert response.status_code == 403
 
 
 def test_registration_rolls_back_when_email_delivery_fails(client, db_session, monkeypatch):

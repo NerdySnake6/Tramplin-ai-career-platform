@@ -76,6 +76,27 @@ def send_user_verification_email(user: models.User, token: str) -> None:
     )
 
 
+def user_from_token(token: str, db: Session) -> models.User:
+    """Возвращает пользователя из access token или выбрасывает ошибку авторизации."""
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(token, auth.SECRET_KEY, algorithms=[auth.ALGORITHM])
+        email: str = payload.get("sub")
+        if email is None:
+            raise credentials_exception
+    except JWTError:
+        raise credentials_exception
+
+    user = db.query(models.User).filter(models.User.email == email).first()
+    if user is None:
+        raise credentials_exception
+    return user
+
+
 @router.post("/register", response_model=schemas.UserOut, status_code=status.HTTP_201_CREATED)
 def register(user_data: schemas.UserCreate, db: Session = Depends(get_db)):
     """Регистрирует пользователя и создает пустой профиль по его роли."""
@@ -187,20 +208,32 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
 @router.get("/me", response_model=schemas.UserOut)
 def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     """Возвращает пользователя, извлеченного из access token."""
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
-    try:
-        payload = jwt.decode(token, auth.SECRET_KEY, algorithms=[auth.ALGORITHM])
-        email: str = payload.get("sub")
-        if email is None:
-            raise credentials_exception
-    except JWTError:
-        raise credentials_exception
-    
-    user = db.query(models.User).filter(models.User.email == email).first()
-    if user is None:
-        raise credentials_exception
-    return user
+    return user_from_token(token, db)
+
+
+@router.post("/change-password")
+def change_password(
+    payload: schemas.PasswordChange,
+    token: str = Depends(oauth2_scheme),
+    db: Session = Depends(get_db),
+):
+    """Меняет пароль текущего пользователя, кроме системного администратора."""
+    current_user = user_from_token(token, db)
+
+    if not current_user.is_active:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Inactive user")
+
+    if current_user.role == "admin":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin password cannot be changed here")
+
+    if not auth.verify_password(payload.current_password, current_user.hashed_password):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Текущий пароль указан неверно")
+
+    if auth.verify_password(payload.new_password, current_user.hashed_password):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Новый пароль должен отличаться от текущего")
+
+    current_user.hashed_password = auth.get_password_hash(payload.new_password)
+    db.add(current_user)
+    db.commit()
+
+    return {"message": "Пароль успешно изменен"}

@@ -1559,6 +1559,42 @@ async function handleProfileSubmit(event) {
     showNotice('success', 'Профиль сохранен.');
 }
 
+async function handlePasswordChangeSubmit(event) {
+    event.preventDefault();
+    if (!state.currentUser || state.currentUser.role === 'admin') return;
+
+    const currentPassword = el('currentPassword').value;
+    const newPassword = el('newPassword').value;
+    const newPasswordConfirm = el('newPasswordConfirm').value;
+
+    if (newPassword !== newPasswordConfirm) {
+        el('newPasswordConfirm').setCustomValidity('Пароли не совпадают.');
+        el('newPasswordConfirm').reportValidity();
+        return;
+    }
+    el('newPasswordConfirm').setCustomValidity('');
+
+    const response = await apiFetch('/auth/change-password', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            current_password: currentPassword,
+            new_password: newPassword,
+        }),
+    });
+
+    if (!response.ok) {
+        const error = await response.json().catch(() => ({ detail: 'Не удалось изменить пароль.' }));
+        showNotice('danger', typeof error.detail === 'string' ? error.detail : 'Не удалось изменить пароль.');
+        return;
+    }
+
+    el('passwordForm').reset();
+    showNotice('success', 'Пароль изменен.');
+}
+
 function handleLogout(event) {
     event.preventDefault();
     clearToken();
@@ -1696,6 +1732,12 @@ function bindEvents() {
     el('loginForm').addEventListener('submit', handleLoginSubmit);
     el('registerForm').addEventListener('submit', handleRegisterSubmit);
     el('profileForm').addEventListener('submit', handleProfileSubmit);
+    el('passwordForm').addEventListener('submit', handlePasswordChangeSubmit);
+    ['newPassword', 'newPasswordConfirm'].forEach((id) => {
+        el(id).addEventListener('input', () => {
+            el('newPasswordConfirm').setCustomValidity('');
+        });
+    });
     el('applyForm').addEventListener('submit', handleApplySubmit);
     el('generateCoverLetterAiBtn').addEventListener('click', () => {
         void handleCoverLetterAiGenerate();

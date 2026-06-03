@@ -119,6 +119,14 @@ class EmailVerificationResend(BaseModel):
 
     email: EmailStr
 
+
+class PasswordChange(BaseModel):
+    """Данные для смены пароля текущего пользователя."""
+
+    current_password: str = Field(min_length=1)
+    new_password: str = Field(min_length=6)
+
+
 class TagBase(BaseModel):
     name: str = Field(min_length=1, max_length=50)
     category: Literal["tech", "level", "employment_type", "format"]

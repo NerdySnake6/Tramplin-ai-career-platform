@@ -40,9 +40,11 @@ export function createProfileController({
         const status = el('profileStatusText');
         const applicantFields = el('applicantProfileFields');
         const employerFields = el('employerProfileFields');
+        const passwordForm = el('passwordForm');
 
         if (!state.currentUser) {
             form.classList.add('d-none');
+            passwordForm.classList.add('d-none');
             guestHint.classList.remove('d-none');
             status.textContent = 'Гость';
             setEmployerRequired(false);
@@ -52,6 +54,7 @@ export function createProfileController({
         }
 
         form.classList.remove('d-none');
+        passwordForm.classList.toggle('d-none', state.currentUser.role === 'admin');
         guestHint.classList.add('d-none');
         status.textContent = currentRoleLabel(state.currentUser.role);
         el('profileDisplayName').value = state.currentUser.display_name || '';

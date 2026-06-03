@@ -541,6 +541,29 @@
 
                                 <button type="submit" class="btn btn-sm btn-primary mt-2">Сохранить профиль</button>
                             </form>
+                            <form id="passwordForm" class="profile-security-form d-none mt-4">
+                                <div class="d-flex justify-content-between align-items-start gap-3 mb-2">
+                                    <div>
+                                        <h3 class="subsection-heading mb-1">Безопасность</h3>
+                                        <p class="text-muted small mb-0">Измени пароль, если он стал известен другим людям.</p>
+                                    </div>
+                                </div>
+                                <div class="row g-2">
+                                    <div class="col-md-4">
+                                        <label for="currentPassword" class="form-label">Текущий пароль</label>
+                                        <input type="password" class="form-control" id="currentPassword" autocomplete="current-password" required>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label for="newPassword" class="form-label">Новый пароль</label>
+                                        <input type="password" class="form-control" id="newPassword" minlength="6" autocomplete="new-password" required>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label for="newPasswordConfirm" class="form-label">Повтор нового пароля</label>
+                                        <input type="password" class="form-control" id="newPasswordConfirm" minlength="6" autocomplete="new-password" required>
+                                    </div>
+                                </div>
+                                <button type="submit" class="btn btn-sm btn-outline-primary mt-3">Изменить пароль</button>
+                            </form>
                             <p class="text-muted mb-0" id="profileGuestHint">Войди в систему, чтобы заполнить профиль.</p>
                         </div>
                     </div>
