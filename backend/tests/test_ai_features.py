@@ -93,6 +93,17 @@ def test_ai_status_reflects_configuration(client, monkeypatch):
     assert "test-key" not in str(payload)
 
 
+def test_ai_rate_limit_settings_are_configurable(monkeypatch):
+    """Проверяет env-настройки in-memory лимита AI-запросов."""
+    monkeypatch.setenv("AI_RATE_LIMIT_WINDOW_SECONDS", "30")
+    monkeypatch.setenv("AI_RATE_LIMIT_MAX_REQUESTS", "3")
+
+    window, max_requests = ai_router.get_ai_rate_limit_settings()
+
+    assert window == timedelta(seconds=30)
+    assert max_requests == 3
+
+
 def test_employer_can_use_opportunity_assist(client, db_session, monkeypatch):
     """Проверяет генерацию описания и сопоставление тегов из справочника."""
     enable_ai(monkeypatch)

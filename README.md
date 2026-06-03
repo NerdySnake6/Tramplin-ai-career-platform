@@ -222,6 +222,8 @@ POLZA_API_BASE_URL=https://polza.ai/api/v1
 POLZA_MODEL=openai/gpt-5.4-mini
 AI_REQUEST_TIMEOUT_SECONDS=20
 AI_MAX_OUTPUT_TOKENS=3000
+AI_RATE_LIMIT_WINDOW_SECONDS=60
+AI_RATE_LIMIT_MAX_REQUESTS=10
 FRONTEND_PORT=80
 FRONTEND_HTTPS_PORT=443
 ```
@@ -264,6 +266,8 @@ POLZA_API_BASE_URL=https://polza.ai/api/v1
 POLZA_MODEL=openai/gpt-5.4-mini
 AI_REQUEST_TIMEOUT_SECONDS=20
 AI_MAX_OUTPUT_TOKENS=3000
+AI_RATE_LIMIT_WINDOW_SECONDS=60
+AI_RATE_LIMIT_MAX_REQUESTS=10
 ```
 
 3. Перезапусти backend, чтобы он перечитал `.env`:
@@ -286,6 +290,7 @@ curl https://tramplin.site/api/ai/status
 Модель выбирается не при создании API-ключа, а в каждом запросе через `POLZA_MODEL`.
 Используй ID из каталога моделей Polza.ai в формате `provider/model`, например `openai/gpt-5.4-mini`.
 `AI_MAX_OUTPUT_TOKENS` ограничивает длину ответа модели и по умолчанию оставлен с запасом для полных карточек возможностей.
+`AI_RATE_LIMIT_WINDOW_SECONDS` и `AI_RATE_LIMIT_MAX_REQUESTS` управляют простым in-memory лимитом AI-запросов на пользователя.
 
 AI-сценарии для демонстрации:
 

@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections import defaultdict, deque
 from datetime import UTC, datetime, timedelta
 import json
+import os
 import re
 from time import perf_counter
 from typing import Any, Iterable, NoReturn
@@ -21,8 +22,8 @@ from app.opportunity_visibility import public_opportunity_filters
 
 
 router = APIRouter(prefix="/ai", tags=["ai"])
-RATE_LIMIT_WINDOW = timedelta(minutes=1)
-RATE_LIMIT_MAX_REQUESTS = 10
+DEFAULT_RATE_LIMIT_WINDOW_SECONDS = 60
+DEFAULT_RATE_LIMIT_MAX_REQUESTS = 10
 _user_request_log: dict[int, deque[datetime]] = defaultdict(deque)
 BROKEN_TEXT_MARKER = "\ufffd"
 OPPORTUNITY_ASSIST_SCHEMA = {
@@ -91,16 +92,34 @@ COVER_LETTER_SCHEMA = {
 }
 
 
+def positive_int_from_env(name: str, default: int) -> int:
+    """Возвращает положительное целое из окружения или безопасное значение по умолчанию."""
+    raw_value = os.getenv(name, str(default))
+    try:
+        value = int(raw_value)
+    except (TypeError, ValueError):
+        return default
+    return value if value > 0 else default
+
+
+def get_ai_rate_limit_settings() -> tuple[timedelta, int]:
+    """Читает настройки in-memory rate limit для AI-запросов."""
+    window_seconds = positive_int_from_env("AI_RATE_LIMIT_WINDOW_SECONDS", DEFAULT_RATE_LIMIT_WINDOW_SECONDS)
+    max_requests = positive_int_from_env("AI_RATE_LIMIT_MAX_REQUESTS", DEFAULT_RATE_LIMIT_MAX_REQUESTS)
+    return timedelta(seconds=window_seconds), max_requests
+
+
 def check_ai_rate_limit(current_user: models.User) -> None:
     """Ограничивает число AI-запросов на пользователя в памяти процесса."""
     now = datetime.now(UTC)
+    window, max_requests = get_ai_rate_limit_settings()
     bucket = _user_request_log[current_user.id]
-    while bucket and now - bucket[0] > RATE_LIMIT_WINDOW:
+    while bucket and now - bucket[0] > window:
         bucket.popleft()
-    if len(bucket) >= RATE_LIMIT_MAX_REQUESTS:
+    if len(bucket) >= max_requests:
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail="Слишком много AI-запросов. Попробуй еще раз через минуту.",
+            detail="Слишком много AI-запросов. Попробуй еще раз позже.",
         )
     bucket.append(now)
 
