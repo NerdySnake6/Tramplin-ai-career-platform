@@ -312,3 +312,4 @@ def delete_opportunity(
     db.delete(opp)
     db.commit()
     return {"ok": True}
+
