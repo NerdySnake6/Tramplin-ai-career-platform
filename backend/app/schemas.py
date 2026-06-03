@@ -168,6 +168,7 @@ class OpportunityOut(OpportunityBase):
     id: int
     employer_id: int
     employer_name: str
+    employer_is_verified: bool = True
     published_at: datetime
     tags: List[TagOut] = []
 

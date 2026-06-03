@@ -1,10 +1,99 @@
+:root {
+    --primary-color: #6366f1;
+    --primary-hover: #4f46e5;
+    --primary-rgb: 99, 102, 241;
+}
+
 body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     background:
-        radial-gradient(circle at top right, rgba(13, 110, 253, 0.14), transparent 30%),
-        radial-gradient(circle at bottom left, rgba(16, 185, 129, 0.1), transparent 28%),
-        linear-gradient(180deg, #f3f7ff 0%, #edf4ff 42%, #f8f9fa 100%);
-    color: #1f2a37;
+        radial-gradient(circle at top right, rgba(99, 102, 241, 0.12), transparent 35%),
+        radial-gradient(circle at bottom left, rgba(16, 185, 129, 0.08), transparent 30%),
+        linear-gradient(180deg, #f8fafc 0%, #f1f5f9 42%, #f8fafc 100%);
+    color: #0f172a;
+}
+
+/* Overriding Bootstrap Primary classes */
+.btn-primary {
+    background-color: var(--primary-color) !important;
+    border-color: var(--primary-color) !important;
+}
+.btn-primary:hover, .btn-primary:focus, .btn-primary:active {
+    background-color: var(--primary-hover) !important;
+    border-color: var(--primary-hover) !important;
+}
+.btn-outline-primary {
+    color: var(--primary-color) !important;
+    border-color: var(--primary-color) !important;
+}
+.btn-outline-primary:hover, .btn-outline-primary:focus, .btn-outline-primary:active {
+    background-color: var(--primary-color) !important;
+    border-color: var(--primary-color) !important;
+    color: #fff !important;
+}
+.text-primary {
+    color: var(--primary-color) !important;
+}
+.border-primary {
+    border-color: var(--primary-color) !important;
+}
+.bg-primary {
+    background-color: var(--primary-color) !important;
+}
+.bg-indigo {
+    background-color: var(--primary-color) !important;
+}
+.navbar.bg-primary {
+    background-color: #4f46e5 !important;
+}
+
+/* Card and List Item Polishing */
+.card, .list-group-item, .modal-content, .offcanvas {
+    border-radius: 12px !important;
+    border: 1px solid #e2e8f0 !important;
+}
+
+.employer-home-opportunity-card, .list-group-item.opportunity-item {
+    transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05) !important;
+}
+
+.employer-home-opportunity-card:hover, .list-group-item.opportunity-item:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 10px 15px -3px rgba(99, 102, 241, 0.1), 0 4px 6px -4px rgba(99, 102, 241, 0.1) !important;
+}
+
+/* Skeleton Loaders */
+.skeleton-line {
+    height: 1rem;
+    margin-bottom: 0.5rem;
+    border-radius: 4px;
+    background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+    background-size: 200% 100%;
+    animation: skeleton-loading 1.5s infinite;
+}
+
+.skeleton-title {
+    width: 60%;
+    height: 1.25rem;
+    margin-bottom: 1rem;
+}
+
+.skeleton-text {
+    width: 100%;
+}
+
+.skeleton-text.short {
+    width: 80%;
+}
+
+@keyframes skeleton-loading {
+    0% {
+        background-position: 200% 0;
+    }
+    100% {
+        background-position: -200% 0;
+    }
 }
 
 #app {

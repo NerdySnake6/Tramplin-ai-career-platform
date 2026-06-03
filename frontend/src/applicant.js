@@ -441,28 +441,60 @@ export function createApplicantController({
         button.disabled = true;
         button.textContent = 'AI пишет...';
 
-        const response = await apiFetch('/ai/cover-letter', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ opportunity_id: state.pendingApplyId }),
-        });
-
-        button.disabled = false;
-        button.textContent = 'Сгенерировать с AI';
-
-        if (!response.ok) {
-            const error = await response.json().catch(() => ({ detail: 'AI-помощник временно недоступен.' }));
-            showNotice('danger', typeof error.detail === 'string' ? error.detail : 'AI-помощник временно недоступен.');
-            return;
+        const resultContainer = el('coverLetterAiResult');
+        if (resultContainer) {
+            resultContainer.innerHTML = '';
+            resultContainer.classList.remove('d-none');
+            const skeleton = createEl('div', 'p-3 border rounded');
+            skeleton.appendChild(createEl('div', 'skeleton-line skeleton-title'));
+            skeleton.appendChild(createEl('div', 'skeleton-line skeleton-text'));
+            skeleton.appendChild(createEl('div', 'skeleton-line skeleton-text short'));
+            resultContainer.appendChild(skeleton);
         }
 
-        const result = await response.json();
-        el('coverLetter').value = result.cover_letter || '';
-        renderCoverLetterAiResult(result);
-        refreshFieldCounters();
-        showNotice('success', 'AI подготовил черновик письма. Проверь текст перед отправкой.');
+        const coverField = el('coverLetter');
+        const originalText = coverField ? coverField.value : "";
+        if (coverField) {
+            coverField.placeholder = "AI пишет сопроводительное письмо...";
+            coverField.value = "";
+        }
+
+        try {
+            const response = await apiFetch('/ai/cover-letter', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ opportunity_id: state.pendingApplyId }),
+            });
+
+            if (!response.ok) {
+                const error = await response.json().catch(() => ({ detail: 'AI-помощник временно недоступен.' }));
+                showNotice('danger', typeof error.detail === 'string' ? error.detail : 'AI-помощник временно недоступен.');
+                renderCoverLetterAiResult(null);
+                if (coverField) {
+                    coverField.placeholder = "";
+                    coverField.value = originalText;
+                }
+                return;
+            }
+
+            const result = await response.json();
+            el('coverLetter').value = result.cover_letter || '';
+            renderCoverLetterAiResult(result);
+            refreshFieldCounters();
+            showNotice('success', 'AI подготовил черновик письма. Проверь текст перед отправкой.');
+        } catch (_error) {
+            showNotice('danger', 'AI-помощник временно недоступен.');
+            renderCoverLetterAiResult(null);
+            if (coverField) {
+                coverField.placeholder = "";
+                coverField.value = originalText;
+            }
+        } finally {
+            button.disabled = false;
+            button.textContent = 'Сгенерировать с AI';
+        }
     }
 
     async function handleApplySubmit(event) {

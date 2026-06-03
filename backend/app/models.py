@@ -191,6 +191,13 @@ class Opportunity(Base):
             return self.employer.display_name
         return "Работодатель"
 
+    @property
+    def employer_is_verified(self) -> bool:
+        """Возвращает статус верификации работодателя."""
+        if self.employer:
+            return self.employer.is_verified
+        return True
+
 
 class Response(Base):
     """Отклик соискателя на вакансию/мероприятие"""

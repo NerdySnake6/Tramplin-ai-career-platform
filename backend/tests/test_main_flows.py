@@ -1480,3 +1480,60 @@ def test_admin_can_create_curator_accounts(client, db_session):
     assert payload["role"] == "curator"
     assert payload["is_active"] is True
     assert payload["is_verified"] is True
+
+
+def test_opportunity_employer_is_verified_serialization(client, db_session):
+    """Проверяет, что свойство employer_is_verified верно передается со схемой OpportunityOut."""
+    verified_employer = models.User(
+        email="verified-emp@example.com",
+        hashed_password="hash",
+        display_name="Verified Employer Inc",
+        role="employer",
+        is_active=True,
+        is_verified=True,
+    )
+    unverified_employer = models.User(
+        email="unverified-emp@example.com",
+        hashed_password="hash",
+        display_name="Unverified Employer LLC",
+        role="employer",
+        is_active=True,
+        is_verified=False,
+    )
+    db_session.add_all([verified_employer, unverified_employer])
+    db_session.commit()
+
+    opp_verified = models.Opportunity(
+        employer_id=verified_employer.id,
+        title="Opportunity of Verified Employer",
+        description="Очень длинное описание для прохождения валидации схемы, минимум двадцать символов.",
+        type="job",
+        work_format="office",
+        location="Москва",
+        salary_range="100 000 руб",
+        is_active=True,
+    )
+    opp_unverified = models.Opportunity(
+        employer_id=unverified_employer.id,
+        title="Opportunity of Unverified Employer",
+        description="Очень длинное описание для прохождения валидации схемы, минимум двадцать символов.",
+        type="job",
+        work_format="office",
+        location="Москва",
+        salary_range="100 000 руб",
+        is_active=True,
+    )
+    db_session.add_all([opp_verified, opp_unverified])
+    db_session.commit()
+
+    response = client.get("/opportunities/")
+    assert response.status_code == 200
+    data = response.json()
+    
+    # Ищем наши вакансии в списке
+    verified_json = [o for o in data if o["id"] == opp_verified.id][0]
+    unverified_json = [o for o in data if o["id"] == opp_unverified.id][0]
+    
+    assert verified_json["employer_is_verified"] is True
+    assert unverified_json["employer_is_verified"] is False
+

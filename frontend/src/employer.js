@@ -408,33 +408,64 @@ export function createEmployerController({
         button.disabled = true;
         button.textContent = 'AI думает...';
 
-        const response = await apiFetch('/ai/opportunity-assist', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(payload),
-        });
-
-        button.disabled = false;
-        button.textContent = 'AI-помощник';
-
-        if (!response.ok) {
-            const error = await response.json().catch(() => ({ detail: 'AI-помощник временно недоступен.' }));
-            showNotice('danger', typeof error.detail === 'string' ? error.detail : 'AI-помощник временно недоступен.');
-            return;
+        const resultContainer = el('employerOpportunityAiResult');
+        if (resultContainer) {
+            resultContainer.innerHTML = '';
+            resultContainer.classList.remove('d-none');
+            const skeleton = createEl('div', 'p-3 border rounded');
+            skeleton.appendChild(createEl('div', 'skeleton-line skeleton-title'));
+            skeleton.appendChild(createEl('div', 'skeleton-line skeleton-text'));
+            skeleton.appendChild(createEl('div', 'skeleton-line skeleton-text short'));
+            resultContainer.appendChild(skeleton);
         }
 
-        const result = await response.json();
-        if (result.description) {
-            el('employerOpportunityDescription').value = result.description;
+        const descField = el('employerOpportunityDescription');
+        if (descField) {
+            descField.placeholder = "AI генерирует описание возможности...";
+            descField.value = "";
         }
-        if (Array.isArray(result.suggested_tags) && result.suggested_tags.length) {
-            renderTagChoices('employerOpportunityTagOptions', result.suggested_tags.map((tag) => tag.id));
+
+        try {
+            const response = await apiFetch('/ai/opportunity-assist', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(payload),
+            });
+
+            if (!response.ok) {
+                const error = await response.json().catch(() => ({ detail: 'AI-помощник временно недоступен.' }));
+                showNotice('danger', typeof error.detail === 'string' ? error.detail : 'AI-помощник временно недоступен.');
+                renderEmployerOpportunityAiResult(null);
+                if (descField) {
+                    descField.placeholder = "";
+                    descField.value = payload.description || "";
+                }
+                return;
+            }
+
+            const result = await response.json();
+            if (result.description) {
+                el('employerOpportunityDescription').value = result.description;
+            }
+            if (Array.isArray(result.suggested_tags) && result.suggested_tags.length) {
+                renderTagChoices('employerOpportunityTagOptions', result.suggested_tags.map((tag) => tag.id));
+            }
+            renderEmployerOpportunityAiResult(result);
+            refreshFieldCounters();
+            showNotice('success', 'AI подготовил черновик карточки. Проверь и сохрани изменения.');
+        } catch (_error) {
+            showNotice('danger', 'AI-помощник временно недоступен.');
+            renderEmployerOpportunityAiResult(null);
+            if (descField) {
+                descField.placeholder = "";
+                descField.value = payload.description || "";
+            }
+        } finally {
+            button.disabled = false;
+            button.textContent = 'AI-помощник';
         }
-        renderEmployerOpportunityAiResult(result);
-        refreshFieldCounters();
-        showNotice('success', 'AI подготовил черновик карточки. Проверь и сохрани изменения.');
     }
 
     async function saveEmployerOpportunity({ id = null, payload, successMessage }) {

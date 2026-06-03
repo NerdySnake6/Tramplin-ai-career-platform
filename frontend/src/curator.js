@@ -586,6 +586,18 @@ export function createCuratorController({
         button.disabled = true;
         button.textContent = 'AI проверяет...';
 
+        const container = el('curatorOpportunityAiReviewResult');
+        if (container) {
+            container.innerHTML = '';
+            container.classList.remove('d-none');
+            const skeleton = createEl('div', 'p-3 border rounded');
+            skeleton.appendChild(createEl('div', 'skeleton-line skeleton-title'));
+            skeleton.appendChild(createEl('div', 'skeleton-line skeleton-text'));
+            skeleton.appendChild(createEl('div', 'skeleton-line skeleton-text'));
+            skeleton.appendChild(createEl('div', 'skeleton-line skeleton-text short'));
+            container.appendChild(skeleton);
+        }
+
         try {
             const response = await apiFetch('/ai/moderation-review', {
                 method: 'POST',
@@ -598,6 +610,7 @@ export function createCuratorController({
             if (!response.ok) {
                 const error = await response.json().catch(() => ({ detail: 'AI-проверка временно недоступна.' }));
                 showNotice('danger', typeof error.detail === 'string' ? error.detail : 'AI-проверка временно недоступна.');
+                renderCuratorOpportunityAiReview(null);
                 return;
             }
 
@@ -606,6 +619,7 @@ export function createCuratorController({
             showNotice('success', 'AI подготовил подсказку для ручной модерации.');
         } catch (_error) {
             showNotice('danger', 'AI-проверка временно недоступна.');
+            renderCuratorOpportunityAiReview(null);
         } finally {
             button.disabled = false;
             button.textContent = 'AI-проверка';
