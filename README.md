@@ -53,6 +53,8 @@ flowchart LR
 ## Что нужно для запуска
 
 - `git`
+- `Docker Engine`
+- `Docker Compose v2` (`docker compose version`)
 - `Python 3.11`
 - `pip`
 - `Node.js 20+`
@@ -73,12 +75,13 @@ cd if-else-hackathon-2026
 
 ## Переменные окружения
 
-Перед запуском нужны два файла:
+Для локальной разработки обычно нужны два файла:
 
 1. `backend/.env`
 2. `frontend/.env.local`
 
 Файлы `backend/.env.example` и `frontend/.env.example` лежат в репозитории как шаблоны.
+Для production на VPS используется один общий файл `.env` в корне проекта, он описан ниже в разделе Docker.
 
 ### Как получить ключ Яндекс Карт
 
@@ -96,11 +99,23 @@ cd if-else-hackathon-2026
 
 ```env
 YANDEX_GEOCODER_API_KEY=твой_ключ_яндекс_карт
+POSTGRES_USER=tramplin_user
+POSTGRES_PASSWORD=tramplin_password
+POSTGRES_DB=tramplin_db
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5432
+TRAMPLIN_SECRET_KEY=локальная_случайная_строка
+TRAMPLIN_ADMIN_EMAIL=admin@example.com
+TRAMPLIN_ADMIN_PASSWORD=admin12345
+TRAMPLIN_ADMIN_NAME=Администратор
 ```
 
 Где:
 
 - `YANDEX_GEOCODER_API_KEY` — ключ Яндекс Карт
+- `POSTGRES_*` — параметры локального PostgreSQL
+- `TRAMPLIN_SECRET_KEY` — секрет подписи JWT-токенов
+- `TRAMPLIN_ADMIN_*` — данные первого администратора для локальной базы
 
 ### `frontend/.env.local`
 
@@ -118,10 +133,17 @@ VITE_YANDEX_MAPS_API_KEY=твой_ключ_яндекс_карт
 
 - backend автоматически читает `backend/.env` при запуске
 - после изменения `backend/.env` или `frontend/.env.local` нужно перезапустить backend и frontend
+- если локального PostgreSQL нет, проще всего запускать весь проект через Docker Compose
 
 ## Быстрый старт на macOS / Linux
 
-### 1. Запуск backend
+### 1. Запуск PostgreSQL для локального backend
+
+Для запуска backend вне Docker нужен PostgreSQL, доступный на `localhost:5432`.
+Создай базу и пользователя с параметрами из `backend/.env` или укажи свой `TRAMPLIN_DATABASE_URL`.
+Если не хочешь ставить PostgreSQL локально, запускай проект целиком через Docker на сервере или подключи backend к уже доступной PostgreSQL-базе.
+
+### 2. Запуск backend
 
 ```bash
 cd backend
@@ -129,7 +151,7 @@ python3.11 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 python3.11 -m alembic upgrade head
-uvicorn app.main:app 
+uvicorn app.main:app --reload
 ```
 
 Backend будет доступен по адресу:
@@ -137,7 +159,7 @@ Backend будет доступен по адресу:
 - [http://127.0.0.1:8000](http://127.0.0.1:8000)
 - Swagger: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
 
-### 2. Запуск frontend
+### 3. Запуск frontend
 
 Открой второй терминал:
 
@@ -155,7 +177,12 @@ Frontend будет доступен по адресу:
 
 ## Быстрый старт на Windows
 
-### 1. Запуск backend
+### 1. Запуск PostgreSQL для локального backend
+
+Для запуска backend вне Docker нужен PostgreSQL, доступный на `localhost:5432`.
+Создай базу и пользователя с параметрами из `backend/.env` или укажи свой `TRAMPLIN_DATABASE_URL`.
+
+### 2. Запуск backend
 
 ```bash
 cd backend
@@ -163,10 +190,10 @@ py -3.11 -m venv venv
 venv\Scripts\activate
 pip install -r requirements.txt
 python -m alembic upgrade head
-uvicorn app.main:app 
+uvicorn app.main:app --reload
 ```
 
-### 2. Запуск frontend
+### 3. Запуск frontend
 
 Открой второй терминал:
 
@@ -189,7 +216,34 @@ npm run dev
 - `backend/Dockerfile` — FastAPI, Alembic и PostgreSQL-драйвер
 - `frontend/Dockerfile` — production-сборка Vite и nginx
 
-### 1. Подготовить переменные окружения
+Для production используется Docker Compose v2, то есть команды вида `docker compose ...`.
+Старая команда `docker-compose` не нужна.
+
+### 1. Первый запуск на новом сервере
+
+```bash
+cd ~
+git clone https://github.com/NerdySnake6/if-else-hackathon-2026.git tramplin
+cd ~/tramplin
+cp docker.env.example .env
+nano .env
+```
+
+Заполни `.env`, затем собери и подними все сервисы:
+
+```bash
+docker compose up -d --build
+docker compose ps
+```
+
+Что произойдет при первом запуске:
+
+- поднимется `db` на PostgreSQL 16;
+- поднимется `backend`, дождется PostgreSQL, применит Alembic-миграции и запустит FastAPI;
+- если в базе еще нет администратора и заданы `TRAMPLIN_ADMIN_EMAIL`/`TRAMPLIN_ADMIN_PASSWORD`, backend создаст первого администратора;
+- поднимется `frontend` с nginx, который отдаст сайт и проксирует `/api/*` в backend.
+
+### 2. Переменные окружения для VPS
 
 Создай файл `.env` в корне проекта:
 
@@ -208,7 +262,7 @@ TRAMPLIN_ADMIN_PASSWORD=надежный_пароль
 TRAMPLIN_ADMIN_NAME=Администратор
 TRAMPLIN_AUTO_VERIFY_EMPLOYERS=false
 SMTP_HOST=smtp-relay.brevo.com
-SMTP_PORT=465
+SMTP_PORT=587
 SMTP_USERNAME=логин_SMTP_из_Brevo
 SMTP_PASSWORD=ключ_SMTP_из_Brevo
 SMTP_FROM_EMAIL=noreply@tramplin.site
@@ -228,7 +282,15 @@ FRONTEND_PORT=80
 FRONTEND_HTTPS_PORT=443
 ```
 
-### 2. Подключить отправку писем через Brevo
+Важно:
+
+- `.env` в корне проекта используется Docker Compose и не должен попадать в git;
+- после изменения backend-переменных нужно пересоздать backend-контейнер;
+- после изменения `VITE_YANDEX_MAPS_API_KEY` нужно пересобрать frontend, потому что ключ попадает в production-сборку Vite;
+- `POLZA_API_KEY`, SMTP-пароль, `TRAMPLIN_SECRET_KEY` и пароль PostgreSQL остаются только на backend/VPS;
+- `VITE_YANDEX_MAPS_API_KEY` является публичным frontend-ключом, поэтому ограничения для него настраиваются в кабинете Яндекса.
+
+### 3. Подключить отправку писем через Brevo
 
 Email-подтверждение использует SMTP и отправляет письма от имени `noreply@tramplin.site`.
 Секреты почты хранятся только в `.env` на VPS.
@@ -251,7 +313,9 @@ TXT    _dmarc             v=DMARC1; p=none; rua=mailto:rua@dmarc.brevo.com
 
 Если письма не отправляются, проверь `docker compose logs -f backend`, правильность `SMTP_USERNAME`/`SMTP_PASSWORD`, статус sender и аутентификацию домена в Brevo.
 
-### 3. Включить AI-функции через Polza.ai
+Рекомендуемый порт для Brevo: `587` с STARTTLS. Если используешь `465`, проверь, что backend-конфигурация и SMTP-провайдер ожидают SSL-подключение.
+
+### 4. Включить AI-функции через Polza.ai
 
 AI-функции работают через backend, поэтому API-ключ не попадает во frontend и не виден пользователю в браузере.
 Если ключ не задан или `AI_FEATURES_ENABLED=false`, сайт продолжает работать без AI-подсказок.
@@ -300,26 +364,120 @@ AI-сценарии для демонстрации:
 
 Во всех сценариях AI только предлагает черновик. Финальное решение остается за пользователем или куратором.
 
-### 4. Запустить проект
-
-```bash
-docker compose up -d --build
-```
-
-После запуска:
-
-- frontend будет доступен на `https://tramplin.site/`
-- backend будет доступен внутри Docker-сети как `backend:8000`
-- Swagger и OpenAPI в production закрыты nginx-конфигом
-
-### 5. Проверить состояние контейнеров
+### 5. Проверить production после запуска
 
 ```bash
 docker compose ps
+curl https://tramplin.site/api/health
+curl https://tramplin.site/api/ai/status
+```
+
+Ожидаемо:
+
+- `db`, `backend`, `frontend` находятся в статусе `Up`;
+- `/api/health` возвращает `{"status":"ok"}`;
+- `/api/ai/status` показывает текущую модель и `ready=true`, если AI включен;
+- frontend доступен на `https://tramplin.site/`;
+- Swagger и OpenAPI в production закрыты nginx-конфигом.
+
+### 6. Повседневные команды Docker Compose
+
+Запустить уже собранные контейнеры:
+
+```bash
+cd ~/tramplin
+docker compose up -d
+```
+
+Остановить контейнеры без удаления данных:
+
+```bash
+docker compose stop
+```
+
+Перезапустить все сервисы:
+
+```bash
+docker compose restart
+```
+
+Посмотреть состояние:
+
+```bash
+docker compose ps
+```
+
+Посмотреть логи backend:
+
+```bash
 docker compose logs -f backend
 ```
 
-При старте backend ждет готовности PostgreSQL и автоматически применяет миграции Alembic.
+Посмотреть логи frontend/nginx:
+
+```bash
+docker compose logs -f frontend
+```
+
+Остановить и удалить контейнеры/сеть, но сохранить PostgreSQL-данные в volume:
+
+```bash
+docker compose down
+```
+
+Не выполняй `docker compose down -v` на production без осознанного бэкапа: флаг `-v` удалит named volume PostgreSQL с данными.
+
+### 7. Обновление production после нового коммита
+
+Обычный безопасный сценарий:
+
+```bash
+cd ~/tramplin
+git pull
+docker compose up -d --build
+docker compose ps
+curl https://tramplin.site/api/health
+```
+
+Если менялся только `.env` для backend и образы пересобирать не нужно:
+
+```bash
+cd ~/tramplin
+docker compose up -d --force-recreate backend
+curl https://tramplin.site/api/health
+```
+
+Если менялся `VITE_YANDEX_MAPS_API_KEY`, пересобери frontend:
+
+```bash
+cd ~/tramplin
+docker compose build frontend
+docker compose up -d frontend
+```
+
+### 8. SSL-сертификат и автопродление
+
+Сертификаты Let's Encrypt лежат на VPS в `/etc/letsencrypt` и монтируются в `frontend` read-only.
+Так как nginx занимает порт `80`, для standalone-renewal Certbot должен временно останавливать frontend.
+
+Хуки Certbot:
+
+```bash
+mkdir -p /etc/letsencrypt/renewal-hooks/pre /etc/letsencrypt/renewal-hooks/post
+
+printf '#!/bin/sh\ncd /root/tramplin && docker compose stop frontend\n' > /etc/letsencrypt/renewal-hooks/pre/stop-frontend.sh
+printf '#!/bin/sh\ncd /root/tramplin && docker compose up -d frontend\n' > /etc/letsencrypt/renewal-hooks/post/start-frontend.sh
+
+chmod +x /etc/letsencrypt/renewal-hooks/pre/stop-frontend.sh
+chmod +x /etc/letsencrypt/renewal-hooks/post/start-frontend.sh
+```
+
+Проверка:
+
+```bash
+certbot renew --dry-run
+docker compose ps
+```
 
 ### Миграция старой SQLite-базы в PostgreSQL
 
@@ -335,18 +493,7 @@ docker compose exec backend env TRAMPLIN_SQLITE_BACKUP_PATH=/app/tramplin_backup
 
 ## Первый администратор
 
-После применения миграций и первого запуска backend в базе автоматически создается один администратор, если пользователя с ролью `admin` еще нет и явно заданы переменные окружения администратора.
-
-Это происходит после выполнения команд:
-
-```bash
-cd backend
-source venv/bin/activate
-python3.11 -m alembic upgrade head
-uvicorn app.main:app --reload
-```
-
-Перед первым запуском задай данные администратора в окружении:
+После первого запуска backend в базе автоматически создается один администратор, если пользователя с ролью `admin` еще нет и явно заданы переменные окружения:
 
 ```env
 TRAMPLIN_ADMIN_EMAIL=admin@example.com
@@ -362,14 +509,23 @@ TRAMPLIN_ADMIN_NAME=Администратор
 - входить нужно обычным паролем, который был задан при инициализации
 - `TRAMPLIN_AUTO_VERIFY_EMPLOYERS=false` оставляет ручную модерацию работодателей; значение `true` стоит включать только для закрытого демо-режима
 
-При необходимости данные администратора можно переопределить через переменные окружения backend.
-
 ## Что проверить после запуска
+
+Локально:
 
 1. Открывается frontend на `http://127.0.0.1:5173`
 2. Открывается backend на `http://127.0.0.1:8000/docs`
 3. На главной странице отображаются карта и карточки возможностей
 4. Можно войти под администратором, заданным через переменные окружения
+
+На VPS:
+
+1. `docker compose ps` показывает `db`, `backend`, `frontend` в статусе `Up`
+2. `curl https://tramplin.site/api/health` возвращает `{"status":"ok"}`
+3. `curl https://tramplin.site/api/ai/status` возвращает корректную модель, если AI включен
+4. Регистрация пользователя отправляет письмо подтверждения
+5. Новая карточка с физическим адресом получает координаты и появляется на карте после модерации
+6. Работают роли `applicant`, `employer`, `curator`, `admin`
 
 ## CI/CD
 
@@ -390,9 +546,12 @@ CI проверяет:
 
 ## Полезные замечания
 
-- если маркеры на карте не появляются, сначала проверь `YANDEX_GEOCODER_API_KEY`, `VITE_YANDEX_MAPS_API_KEY` и CSP в `frontend/nginx.conf`
-- если менялись `.env`-файлы, всегда перезапускай backend и frontend
-- если база не совпадает с миграциями, backend попросит сначала выполнить `alembic upgrade head`
+- `docker compose build` только собирает образы и не запускает контейнеры; после него нужен `docker compose up -d`
+- если маркеры на карте не появляются, сначала проверь `YANDEX_GEOCODER_API_KEY`, `VITE_YANDEX_MAPS_API_KEY`, ограничения ключей в Яндексе, логи backend и CSP в `frontend/nginx.conf`
+- если менялись backend-переменные в `.env`, пересоздай backend-контейнер
+- если менялись frontend build args, пересобери frontend-контейнер
+- если база не совпадает с миграциями, backend применяет Alembic при старте; при ошибке смотри `docker compose logs -f backend`
+- если AI долго отвечает, проверь модель `POLZA_MODEL`, timeout, rate limit и telemetry в `docker compose logs -f backend`
 
 ## Проект в сети
 
