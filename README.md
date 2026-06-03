@@ -217,8 +217,9 @@ EMAIL_VERIFICATION_TTL_MINUTES=60
 AI_FEATURES_ENABLED=false
 POLZA_API_KEY=ключ_API_из_Polza
 POLZA_API_BASE_URL=https://polza.ai/api/v1
-POLZA_MODEL=openai/gpt-4o-mini
+POLZA_MODEL=openai/gpt-5.4-mini
 AI_REQUEST_TIMEOUT_SECONDS=20
+AI_MAX_OUTPUT_TOKENS=3000
 FRONTEND_PORT=80
 FRONTEND_HTTPS_PORT=443
 ```
@@ -258,8 +259,9 @@ AI-функции работают через backend, поэтому API-клю
 AI_FEATURES_ENABLED=true
 POLZA_API_KEY=твой_ключ_Polza
 POLZA_API_BASE_URL=https://polza.ai/api/v1
-POLZA_MODEL=openai/gpt-4o-mini
+POLZA_MODEL=openai/gpt-5.4-mini
 AI_REQUEST_TIMEOUT_SECONDS=20
+AI_MAX_OUTPUT_TOKENS=3000
 ```
 
 3. Перезапусти backend, чтобы он перечитал `.env`:
@@ -280,7 +282,8 @@ curl https://tramplin.site/api/ai/status
 В ответе `ready` должен быть `true`, если AI включен и ключ задан.
 
 Модель выбирается не при создании API-ключа, а в каждом запросе через `POLZA_MODEL`.
-Используй ID из каталога моделей Polza.ai в формате `provider/model`, например `openai/gpt-4o-mini`.
+Используй ID из каталога моделей Polza.ai в формате `provider/model`, например `openai/gpt-5.4-mini`.
+`AI_MAX_OUTPUT_TOKENS` ограничивает длину ответа модели и по умолчанию оставлен с запасом для полных карточек возможностей.
 
 AI-сценарии для демонстрации:
 

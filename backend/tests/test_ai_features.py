@@ -74,11 +74,14 @@ def enable_ai(monkeypatch):
 def test_ai_status_reflects_configuration(client, monkeypatch):
     """Проверяет, что статус не раскрывает секреты и корректно отражает готовность."""
     monkeypatch.delenv("POLZA_API_KEY", raising=False)
+    monkeypatch.delenv("POLZA_MODEL", raising=False)
     monkeypatch.setenv("AI_FEATURES_ENABLED", "false")
 
     disabled_response = client.get("/ai/status")
     assert disabled_response.status_code == 200
-    assert disabled_response.json()["ready"] is False
+    disabled_payload = disabled_response.json()
+    assert disabled_payload["ready"] is False
+    assert disabled_payload["model"] == "openai/gpt-5.4-mini"
 
     enable_ai(monkeypatch)
     enabled_response = client.get("/ai/status")

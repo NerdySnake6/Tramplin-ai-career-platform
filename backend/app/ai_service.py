@@ -2,16 +2,20 @@
 
 from __future__ import annotations
 
-import json
-import os
 from dataclasses import dataclass
+import json
+import logging
+import os
+from time import perf_counter
 from typing import Any
 from urllib import error, request
 
 
 DEFAULT_POLZA_API_BASE_URL = "https://polza.ai/api/v1"
-DEFAULT_POLZA_MODEL = "openai/gpt-4o-mini"
+DEFAULT_POLZA_MODEL = "openai/gpt-5.4-mini"
 DEFAULT_AI_TIMEOUT_SECONDS = 20
+DEFAULT_AI_MAX_OUTPUT_TOKENS = 3000
+logger = logging.getLogger(__name__)
 
 
 class AIServiceError(RuntimeError):
@@ -35,6 +39,7 @@ class AISettings:
     base_url: str
     model: str
     timeout_seconds: int
+    max_output_tokens: int
 
 
 def env_flag(name: str, default: str = "false") -> bool:
@@ -45,10 +50,15 @@ def env_flag(name: str, default: str = "false") -> bool:
 def get_ai_settings() -> AISettings:
     """Возвращает настройки AI-интеграции из переменных окружения."""
     raw_timeout = os.getenv("AI_REQUEST_TIMEOUT_SECONDS", str(DEFAULT_AI_TIMEOUT_SECONDS))
+    raw_max_output_tokens = os.getenv("AI_MAX_OUTPUT_TOKENS", str(DEFAULT_AI_MAX_OUTPUT_TOKENS))
     try:
         timeout_seconds = max(1, min(int(raw_timeout), 60))
     except ValueError:
         timeout_seconds = DEFAULT_AI_TIMEOUT_SECONDS
+    try:
+        max_output_tokens = max(1, min(int(raw_max_output_tokens), 16000))
+    except ValueError:
+        max_output_tokens = DEFAULT_AI_MAX_OUTPUT_TOKENS
 
     return AISettings(
         enabled=env_flag("AI_FEATURES_ENABLED", "false"),
@@ -56,6 +66,7 @@ def get_ai_settings() -> AISettings:
         base_url=(os.getenv("POLZA_API_BASE_URL") or DEFAULT_POLZA_API_BASE_URL).strip().rstrip("/"),
         model=(os.getenv("POLZA_MODEL") or DEFAULT_POLZA_MODEL).strip(),
         timeout_seconds=timeout_seconds,
+        max_output_tokens=max_output_tokens,
     )
 
 
@@ -126,6 +137,7 @@ def call_chat_json(
         "model": settings.model,
         "messages": messages,
         "temperature": temperature,
+        "max_tokens": settings.max_output_tokens,
         "response_format": response_format_for_schema(schema_name, response_schema),
     }
     data = json.dumps(payload, ensure_ascii=False).encode("utf-8")
@@ -139,21 +151,59 @@ def call_chat_json(
         method="POST",
     )
 
+    started_at = perf_counter()
     try:
         with request.urlopen(req, timeout=settings.timeout_seconds) as response:
             raw_body = response.read().decode("utf-8")
     except error.HTTPError as exc:
+        duration_ms = round((perf_counter() - started_at) * 1000)
+        logger.info(
+            "ai_request schema=%s model=%s duration_ms=%s success=false error=http_%s",
+            schema_name,
+            settings.model,
+            duration_ms,
+            exc.code,
+        )
         detail = exc.read().decode("utf-8", errors="replace")
         raise AIServiceError(f"AI API вернул ошибку {exc.code}: {detail[:300]}") from exc
     except error.URLError as exc:
+        duration_ms = round((perf_counter() - started_at) * 1000)
+        logger.info(
+            "ai_request schema=%s model=%s duration_ms=%s success=false error=url_error",
+            schema_name,
+            settings.model,
+            duration_ms,
+        )
         raise AIServiceError("AI API временно недоступен.") from exc
     except TimeoutError as exc:
+        duration_ms = round((perf_counter() - started_at) * 1000)
+        logger.info(
+            "ai_request schema=%s model=%s duration_ms=%s success=false error=timeout",
+            schema_name,
+            settings.model,
+            duration_ms,
+        )
         raise AIServiceError("AI API не ответил за отведенное время.") from exc
 
     try:
         body = json.loads(raw_body)
         content = body["choices"][0]["message"]["content"]
     except (KeyError, IndexError, TypeError, json.JSONDecodeError) as exc:
+        duration_ms = round((perf_counter() - started_at) * 1000)
+        logger.info(
+            "ai_request schema=%s model=%s duration_ms=%s success=false error=unexpected_response",
+            schema_name,
+            settings.model,
+            duration_ms,
+        )
         raise AIResponseError("AI API вернул неожиданный формат ответа.") from exc
 
+    duration_ms = round((perf_counter() - started_at) * 1000)
+    logger.info(
+        "ai_request schema=%s model=%s duration_ms=%s success=true usage=%s",
+        schema_name,
+        settings.model,
+        duration_ms,
+        json.dumps(body.get("usage", {}), ensure_ascii=False, sort_keys=True),
+    )
     return extract_json_object(content)
