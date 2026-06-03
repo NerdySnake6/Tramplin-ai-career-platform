@@ -381,6 +381,44 @@ export function createCuratorController({
         return 'ai-text-highlight-suspicious';
     }
 
+    function highlightPriority(level) {
+        if (level === 'danger') return 3;
+        if (level === 'suspicious') return 2;
+        if (level === 'good') return 1;
+        return 0;
+    }
+
+    function ruleCategoryLabel(category) {
+        if (category === 'illegal_finance') return 'Финансовая схема';
+        if (category === 'illegal_delivery') return 'Незаконная доставка';
+        if (category === 'scam_or_exploitation') return 'Эксплуатация/мошенничество';
+        if (category === 'identity_risk') return 'Документы и данные';
+        if (category === 'unrealistic_promises') return 'Нереалистичные обещания';
+        return category;
+    }
+
+    function sourceLabel(source) {
+        return source === 'rules' ? 'Системное правило' : 'AI';
+    }
+
+    function moderationHighlightItems(result) {
+        const aiHighlights = Array.isArray(result.highlights)
+            ? result.highlights.map((highlight) => ({
+                ...highlight,
+                source: 'ai',
+            }))
+            : [];
+        const ruleHighlights = Array.isArray(result.rule_matches)
+            ? result.rule_matches.map((match) => ({
+                text: match.text,
+                level: match.level,
+                explanation: match.reason,
+                source: 'rules',
+            }))
+            : [];
+        return [...ruleHighlights, ...aiHighlights];
+    }
+
     function createHighlightedDescription(description, highlights) {
         if (!description || !Array.isArray(highlights) || !highlights.length) return null;
 
@@ -398,12 +436,17 @@ export function createCuratorController({
                 end: start + text.length,
                 level: highlight.level,
                 explanation: highlight.explanation || highlightLabel(highlight.level),
+                source: highlight.source || 'ai',
             });
         });
 
         const orderedRanges = [];
         ranges
-            .sort((left, right) => left.start - right.start || right.end - left.end)
+            .sort((left, right) => (
+                left.start - right.start
+                || highlightPriority(right.level) - highlightPriority(left.level)
+                || right.end - left.end
+            ))
             .forEach((range) => {
                 const previousRange = orderedRanges[orderedRanges.length - 1];
                 if (!previousRange || range.start >= previousRange.end) {
@@ -421,8 +464,8 @@ export function createCuratorController({
             }
 
             const marker = createEl('span', `ai-text-highlight ${highlightClass(range.level)}`, description.slice(range.start, range.end));
-            marker.title = range.explanation;
-            marker.setAttribute('aria-label', `${highlightLabel(range.level)}: ${range.explanation}`);
+            marker.title = `${sourceLabel(range.source)}: ${range.explanation}`;
+            marker.setAttribute('aria-label', `${sourceLabel(range.source)}. ${highlightLabel(range.level)}: ${range.explanation}`);
             container.appendChild(marker);
             cursor = range.end;
         });
@@ -432,6 +475,22 @@ export function createCuratorController({
         }
 
         return container;
+    }
+
+    function appendSystemRuleMatches(panel, ruleMatches) {
+        if (!Array.isArray(ruleMatches) || !ruleMatches.length) return;
+
+        panel.appendChild(createEl('div', 'fw-semibold mt-3 mb-1', 'Системные совпадения:'));
+        const list = createEl('div', 'ai-rule-match-list');
+        ruleMatches.forEach((match) => {
+            const item = createEl('div', `ai-rule-match ${highlightClass(match.level)}`);
+            item.appendChild(createEl('span', 'ai-rule-match-source', sourceLabel('rules')));
+            item.appendChild(createEl('span', 'ai-rule-match-category', ruleCategoryLabel(match.category)));
+            item.appendChild(createEl('span', 'ai-rule-match-text', match.text));
+            item.appendChild(createEl('span', 'ai-rule-match-reason', match.reason));
+            list.appendChild(item);
+        });
+        panel.appendChild(list);
     }
 
     function appendModerationHighlights(panel, description, highlights) {
@@ -476,7 +535,8 @@ export function createCuratorController({
         if (Array.isArray(result.reasons) && result.reasons.length) {
             panel.appendChild(createEl('div', 'text-muted', `Причины: ${result.reasons.join('; ')}`));
         }
-        appendModerationHighlights(panel, description, result.highlights);
+        appendSystemRuleMatches(panel, result.rule_matches);
+        appendModerationHighlights(panel, description, moderationHighlightItems(result));
         if (Array.isArray(result.checklist) && result.checklist.length) {
             panel.appendChild(createEl('div', 'fw-semibold mt-2', 'Проверить вручную:'));
             const checklist = createEl('ul', '');

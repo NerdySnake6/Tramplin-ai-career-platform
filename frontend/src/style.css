@@ -1707,6 +1707,49 @@ body {
     white-space: pre-wrap;
 }
 
+.ai-rule-match-list {
+    display: grid;
+    gap: 0.4rem;
+}
+
+.ai-rule-match {
+    align-items: flex-start;
+    border-radius: 0.65rem;
+    display: grid;
+    gap: 0.15rem 0.5rem;
+    grid-template-columns: auto 1fr;
+    padding: 0.45rem 0.55rem;
+}
+
+.ai-rule-match-source,
+.ai-rule-match-category {
+    font-size: 0.75rem;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.ai-rule-match-source {
+    opacity: 0.78;
+}
+
+.ai-rule-match-category {
+    grid-column: 2;
+}
+
+.ai-rule-match-text,
+.ai-rule-match-reason {
+    grid-column: 1 / -1;
+}
+
+.ai-rule-match-text {
+    font-weight: 700;
+}
+
+.ai-rule-match-reason {
+    font-size: 0.84rem;
+    opacity: 0.86;
+}
+
 .ai-text-highlight {
     border: 1px solid transparent;
     font-weight: 600;

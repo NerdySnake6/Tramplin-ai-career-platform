@@ -168,7 +168,7 @@ def test_invalid_ai_json_returns_bad_gateway(client, monkeypatch):
 
 
 def test_curator_can_request_moderation_review(client, db_session, monkeypatch):
-    """Проверяет AI-подсказку для ручной модерации текущего состояния формы."""
+    """Проверяет AI-подсказку и системные правила для текущего состояния формы."""
     enable_ai(monkeypatch)
     curator = create_service_user(db_session, email="curator-ai@example.com", role="curator")
     employer = create_service_user(db_session, email="employer-for-review@example.com", role="employer")
@@ -186,10 +186,11 @@ def test_curator_can_request_moderation_review(client, db_session, monkeypatch):
     db_session.commit()
 
     def fake_moderation_chat_json(messages, **_kwargs):
-        assert "Описание после несохраненной правки куратора" in messages[-1]["content"]
+        assert "Купим банковские карты" in messages[-1]["content"]
+        assert "illegal_finance" in messages[-1]["content"]
         assert "Статус публикации: неактивна" in messages[-1]["content"]
         return {
-            "risk_level": "medium",
+            "risk_level": "low",
             "reasons": ["Текст м��жет содержать мутные условия"],
             "checklist": ["Проверить юридическое лицо"],
             "recommended_action": "Запросить детали условий перед публикацией.",
@@ -215,17 +216,20 @@ def test_curator_can_request_moderation_review(client, db_session, monkeypatch):
             "work_format": "remote",
             "location": "Москва",
             "salary_range": None,
-            "description": "Описание после несохраненной правки куратора",
+            "description": "Описание после несохраненной правки куратора. Купим банковские карты для приема платежей.",
             "is_active": False,
         },
     )
 
     assert response.status_code == 200
     payload = response.json()
-    assert payload["risk_level"] == "medium"
+    assert payload["risk_level"] == "high"
     assert "�" not in str(payload)
     assert payload["reasons"] == ["Текст мжет содержать мутные условия"]
     assert payload["highlights"][0]["level"] == "suspicious"
+    assert payload["rule_matches"][0]["category"] == "illegal_finance"
+    assert payload["rule_matches"][0]["level"] == "danger"
+    assert payload["risk_sources"] == ["rules", "ai"]
     db_session.refresh(opportunity)
     assert opportunity.is_active is True
 

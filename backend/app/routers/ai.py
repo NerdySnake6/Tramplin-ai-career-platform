@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session, joinedload
 from app import ai_service, models, schemas
 from app.database import get_db
 from app.dependencies import get_current_active_user, require_roles
+from app.moderation_rules import ModerationRuleMatch, scan_moderation_rules
 from app.opportunity_visibility import public_opportunity_filters
 
 
@@ -145,6 +146,49 @@ def snapshot_value(value: object, fallback: object) -> object:
     return fallback if value is None else value
 
 
+def moderation_rule_text(rule_matches: list[ModerationRuleMatch]) -> str:
+    """Возвращает компактное описание системных совпадений для prompt."""
+    if not rule_matches:
+        return "-"
+    return "\n".join(
+        f"- {match.level}: {match.category}: {match.text} — {match.reason}"
+        for match in rule_matches
+    )
+
+
+def moderation_risk_sources(
+    parsed: schemas.AIModerationReviewResponse,
+    rule_matches: list[schemas.ModerationRuleMatch],
+) -> list[str]:
+    """Возвращает источники риска, участвовавшие в итоговом решении."""
+    sources = []
+    if rule_matches:
+        sources.append("rules")
+    if parsed.risk_level != "low" or parsed.reasons or parsed.highlights:
+        sources.append("ai")
+    return sources
+
+
+def merge_moderation_response(
+    parsed: schemas.AIModerationReviewResponse,
+    rule_matches: list[schemas.ModerationRuleMatch],
+) -> schemas.AIModerationReviewResponse:
+    """Объединяет AI-проверку с результатами системных правил."""
+    risk_level = parsed.risk_level
+    if any(match.level == "danger" for match in rule_matches):
+        risk_level = "high"
+    elif rule_matches and risk_level == "low":
+        risk_level = "medium"
+
+    return parsed.model_copy(
+        update={
+            "risk_level": risk_level,
+            "rule_matches": rule_matches,
+            "risk_sources": moderation_risk_sources(parsed, rule_matches),
+        }
+    )
+
+
 def match_suggested_tags(suggested_names: list[str], tags: list[models.Tag]) -> list[schemas.AITagSuggestion]:
     """Сопоставляет предложенные моделью названия с существующими тегами."""
     by_name = {tag.name.casefold(): tag for tag in tags}
@@ -188,7 +232,11 @@ def opportunity_prompt(payload: schemas.AIOpportunityAssistRequest, tags: list[m
     ]
 
 
-def moderation_prompt(opportunity: models.Opportunity, payload: schemas.AIModerationReviewRequest) -> list[dict[str, str]]:
+def moderation_prompt(
+    opportunity: models.Opportunity,
+    payload: schemas.AIModerationReviewRequest,
+    rule_matches: list[ModerationRuleMatch],
+) -> list[dict[str, str]]:
     """Создает prompt для AI-проверки карточки куратором."""
     tags = ", ".join(tag.name for tag in opportunity.tags) or "-"
     employer_profile = opportunity.employer.employer_profile if opportunity.employer else None
@@ -215,6 +263,8 @@ def moderation_prompt(opportunity: models.Opportunity, payload: schemas.AIModera
                 f"Статус публикации: {'активна' if is_active else 'неактивна'}\n"
                 f"Теги: {tags}\n"
                 f"Описание: {text_or_dash(snapshot_value(payload.description, opportunity.description))}\n\n"
+                "Системные совпадения rule-based фильтра:\n"
+                f"{moderation_rule_text(rule_matches)}\n\n"
                 "Верни JSON с ключами: risk_level (low|medium|high), reasons (массив), checklist (массив), "
                 "recommended_action (строка), highlights (массив до 8 объектов). "
                 "Каждый объект highlights должен содержать text (точная короткая цитата из описания), "
@@ -325,14 +375,33 @@ def review_moderation(
     if not opportunity:
         raise HTTPException(status_code=404, detail="Opportunity not found")
 
+    rule_matches = scan_moderation_rules(
+        title=str(snapshot_value(payload.title, opportunity.title) or ""),
+        description=str(snapshot_value(payload.description, opportunity.description) or ""),
+        salary_range=str(snapshot_value(payload.salary_range, opportunity.salary_range) or ""),
+        location=str(snapshot_value(payload.location, opportunity.location) or ""),
+        opportunity_type=str(snapshot_value(payload.type, opportunity.type) or ""),
+        work_format=str(snapshot_value(payload.work_format, opportunity.work_format) or ""),
+    )
+    rule_match_payload = [
+        schemas.ModerationRuleMatch(
+            category=match.category,
+            level=match.level,
+            text=match.text,
+            reason=match.reason,
+        )
+        for match in rule_matches
+    ]
+
     try:
         raw = ai_service.call_chat_json(
-            moderation_prompt(opportunity, payload),
+            moderation_prompt(opportunity, payload, rule_matches),
             response_schema=MODERATION_REVIEW_SCHEMA,
             schema_name="moderation_review",
         )
         raw = clean_ai_payload(raw)
-        return schemas.AIModerationReviewResponse.model_validate(raw)
+        parsed = schemas.AIModerationReviewResponse.model_validate(raw)
+        return merge_moderation_response(parsed, rule_match_payload)
     except ValidationError as exc:
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,

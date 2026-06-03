@@ -407,6 +407,21 @@ class AIModerationHighlight(BaseModel):
     explanation: str = Field(default="", max_length=300)
 
 
+class ModerationRuleMatch(BaseModel):
+    """Совпадение системного правила модерации."""
+
+    category: Literal[
+        "illegal_finance",
+        "illegal_delivery",
+        "scam_or_exploitation",
+        "identity_risk",
+        "unrealistic_promises",
+    ]
+    level: Literal["suspicious", "danger"]
+    text: str = Field(min_length=1, max_length=300)
+    reason: str = Field(default="", max_length=500)
+
+
 class AIModerationReviewResponse(BaseModel):
     """AI-подсказка для ручной модерации карточки."""
 
@@ -415,6 +430,8 @@ class AIModerationReviewResponse(BaseModel):
     checklist: list[str] = Field(default_factory=list, max_length=8)
     recommended_action: str = Field(default="", max_length=500)
     highlights: list[AIModerationHighlight] = Field(default_factory=list, max_length=10)
+    rule_matches: list[ModerationRuleMatch] = Field(default_factory=list, max_length=12)
+    risk_sources: list[Literal["rules", "ai"]] = Field(default_factory=list, max_length=2)
 
 
 class AICoverLetterRequest(BaseModel):
