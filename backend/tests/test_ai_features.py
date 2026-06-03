@@ -140,6 +140,76 @@ def test_employer_can_use_opportunity_assist(client, db_session, monkeypatch):
     assert [tag["name"] for tag in payload["suggested_tags"]] == ["Python", "Junior"]
 
 
+def test_opportunity_assist_rejects_meta_description(client, monkeypatch):
+    """Проверяет, что служебный комментарий AI не попадает в публичное описание."""
+    enable_ai(monkeypatch)
+
+    async def fake_chat_json(*_args, **_kwargs):
+        return {
+            "description": (
+                "В карточке не указано описание обязанностей. Перед публикацией стоит обязательно "
+                "проверить поле локации и добавить требования к кандидату."
+            ),
+            "summary": "Карточку нужно уточнить.",
+            "suggested_tag_names": [],
+            "warnings": ["Добавьте обязанности."],
+        }
+
+    monkeypatch.setattr(ai_router.ai_service, "call_chat_json_async", fake_chat_json)
+    headers = register_and_login(client, email="meta-ai-employer@example.com", role="employer")
+
+    response = client.post(
+        "/ai/opportunity-assist",
+        headers=headers,
+        json={
+            "title": "Test3",
+            "description": "",
+            "type": "job",
+            "work_format": "office",
+            "location": "битый текст",
+            "salary_range": "123333222221112233333222112233321321312",
+        },
+    )
+
+    assert response.status_code == 502
+    assert "комментарий вместо публичного описания" in response.json()["detail"]
+
+
+def test_opportunity_assist_warns_about_unreasonable_salary(client, monkeypatch):
+    """Проверяет, что подозрительная зарплата не передается AI как надежный факт."""
+    enable_ai(monkeypatch)
+
+    async def fake_chat_json(messages, **_kwargs):
+        assert "не используй его как факт о зарплате" in messages[-1]["content"]
+        return {
+            "description": "Ищем junior-разработчика для работы над внутренними сервисами под руководством наставника.",
+            "summary": "Junior-разработчик с наставником.",
+            "suggested_tag_names": ["Junior"],
+            "warnings": ["Уточните валюту и период вознаграждения."],
+        }
+
+    monkeypatch.setattr(ai_router.ai_service, "call_chat_json_async", fake_chat_json)
+    headers = register_and_login(client, email="salary-ai-employer@example.com", role="employer")
+
+    response = client.post(
+        "/ai/opportunity-assist",
+        headers=headers,
+        json={
+            "title": "Junior developer",
+            "description": "Помощь команде с задачами разработки.",
+            "type": "job",
+            "work_format": "hybrid",
+            "location": "Москва",
+            "salary_range": "123333222221112233333222112233321321312",
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert "Проверь поле вознаграждения: значение выглядит некорректным." in payload["warnings"]
+    assert "123333" not in payload["description"]
+
+
 def test_applicant_cannot_use_opportunity_assist(client, monkeypatch):
     """Проверяет ролевой запрет для AI-помощника работодателя."""
     enable_ai(monkeypatch)

@@ -19,6 +19,7 @@ from app.database import get_db
 from app.dependencies import get_current_active_user, require_roles
 from app.moderation_rules import ModerationRuleMatch, scan_moderation_rules
 from app.opportunity_visibility import public_opportunity_filters
+from app.salary import has_unreasonable_salary_number
 
 
 router = APIRouter(prefix="/ai", tags=["ai"])
@@ -26,6 +27,26 @@ DEFAULT_RATE_LIMIT_WINDOW_SECONDS = 60
 DEFAULT_RATE_LIMIT_MAX_REQUESTS = 10
 _user_request_log: dict[int, deque[datetime]] = defaultdict(deque)
 BROKEN_TEXT_MARKER = "\ufffd"
+OPPORTUNITY_DESCRIPTION_META_MARKERS = (
+    "в карточке не указан",
+    "в карточке не указана",
+    "в карточке не указано",
+    "перед публикацией",
+    "перед размещением",
+    "стоит обязательно проверить",
+    "нужно уточнить",
+    "лучше уточнить",
+    "требует доработки",
+    "черновик описания отсутствует",
+    "текущий шаблон",
+    "поле локации содержит",
+    "поле зарплат",
+    "поле вознаграждения",
+    "если вы оформляете карточку",
+    "добавьте, чем именно",
+    "нет описания обязанностей",
+    "не указаны обязанности",
+)
 OPPORTUNITY_ASSIST_SCHEMA = {
     "type": "object",
     "additionalProperties": False,
@@ -155,6 +176,51 @@ def clean_ai_payload(value: Any) -> Any:
     if isinstance(value, dict):
         return {key: clean_ai_payload(item) for key, item in value.items()}
     return value
+
+
+def salary_text_for_opportunity_prompt(value: str | None) -> str:
+    """Возвращает безопасное представление зарплаты для prompt AI-помощника."""
+    text = text_or_dash(value)
+    if text == "-":
+        return text
+    if has_unreasonable_salary_number(value):
+        return (
+            f"{text} [значение выглядит некорректным; не используй его как факт о зарплате "
+            "в description, добавь предупреждение в warnings]"
+        )
+    return text
+
+
+def opportunity_assist_system_warnings(payload: schemas.AIOpportunityAssistRequest) -> list[str]:
+    """Формирует backend-предупреждения по полям, которые AI не должен превращать в факты."""
+    warnings: list[str] = []
+    if has_unreasonable_salary_number(payload.salary_range):
+        warnings.append("Проверь поле вознаграждения: значение выглядит некорректным.")
+    return warnings
+
+
+def validate_public_opportunity_description(description: str) -> None:
+    """Не дает вставить служебную диагностику AI в публичное описание карточки."""
+    normalized = clean_ai_text(description).casefold()
+    if any(marker in normalized for marker in OPPORTUNITY_DESCRIPTION_META_MARKERS):
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="AI вернул комментарий вместо публичного описания. Уточни поля карточки и попробуй еще раз.",
+        )
+
+
+def merge_warnings(*groups: Iterable[str]) -> list[str]:
+    """Объединяет предупреждения без дублей, сохраняя порядок."""
+    merged: list[str] = []
+    seen: set[str] = set()
+    for group in groups:
+        for warning in group:
+            cleaned = clean_ai_text(warning)
+            key = cleaned.casefold()
+            if cleaned and key not in seen:
+                merged.append(cleaned)
+                seen.add(key)
+    return merged
 
 
 def tag_catalog_text(tags: Iterable[models.Tag]) -> str:
@@ -327,7 +393,10 @@ def opportunity_prompt(payload: schemas.AIOpportunityAssistRequest, tags: list[m
             "role": "system",
             "content": (
                 "Ты карьерный редактор платформы «Трамплин». Улучши карточку возможности для студентов и junior-специалистов. "
-                "Не выдумывай факты, которых нет во входных данных. Верни только JSON."
+                "Не выдумывай факты, которых нет во входных данных. Поле description — это только публичный текст вакансии "
+                "от лица работодателя; не пиши туда диагностику карточки, чеклист, советы, фразы «нужно уточнить», "
+                "«перед публикацией», «в карточке не указано». Все сомнения и проблемы отправляй только в warnings. "
+                "Верни только JSON."
             ),
         },
         {
@@ -338,12 +407,13 @@ def opportunity_prompt(payload: schemas.AIOpportunityAssistRequest, tags: list[m
                 f"Тип: {payload.type}\n"
                 f"Формат: {payload.work_format}\n"
                 f"Локация: {text_or_dash(payload.location)}\n"
-                f"Зарплата/вознаграждение: {text_or_dash(payload.salary_range)}\n"
+                f"Зарплата/вознаграждение: {salary_text_for_opportunity_prompt(payload.salary_range)}\n"
                 f"Черновик описания: {text_or_dash(payload.description)}\n\n"
                 "Доступные теги:\n"
                 f"{tag_catalog_text(tags)}\n\n"
-                "Верни JSON с ключами: description (строка 700-1200 символов), summary (до 180 символов), "
-                "suggested_tag_names (массив названий только из доступных тегов), warnings (массив коротких предупреждений)."
+                "Верни JSON с ключами: description (строка 700-1200 символов, только готовое публичное описание), "
+                "summary (до 180 символов), suggested_tag_names (массив названий только из доступных тегов), "
+                "warnings (массив коротких предупреждений для работодателя)."
             ),
         },
     ]
@@ -448,6 +518,7 @@ async def assist_opportunity(
     """Генерирует улучшенное описание и предлагает теги для карточки возможности."""
     check_ai_rate_limit(current_user)
     tags = db.query(models.Tag).order_by(models.Tag.category.asc(), models.Tag.name.asc()).all()
+    system_warnings = opportunity_assist_system_warnings(payload)
     try:
         raw = await ai_service.call_chat_json_async(
             opportunity_prompt(payload, tags),
@@ -456,6 +527,7 @@ async def assist_opportunity(
         )
         raw = clean_ai_payload(raw)
         parsed = schemas.AIOpportunityAssistRawResponse.model_validate(raw)
+        validate_public_opportunity_description(parsed.description)
     except ValidationError as exc:
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
@@ -468,7 +540,7 @@ async def assist_opportunity(
         description=parsed.description,
         summary=parsed.summary,
         suggested_tags=match_suggested_tags(parsed.suggested_tag_names, tags),
-        warnings=parsed.warnings[:5],
+        warnings=merge_warnings(system_warnings, parsed.warnings)[:5],
     )
 
 

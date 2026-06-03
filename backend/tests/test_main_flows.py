@@ -723,6 +723,49 @@ def test_employer_opportunity_and_response_flow(client, db_session):
     assert update_status.json()["status"] == "accepted"
 
 
+def test_employer_cannot_create_opportunity_with_unreasonable_salary(client, db_session):
+    """Проверяет, что случайная числовая строка не сохраняется как вознаграждение."""
+    register_response = register_user(
+        client,
+        email="invalid-salary-employer@example.com",
+        password="supersecret",
+        display_name="Invalid Salary Employer",
+        role="employer",
+    )
+    assert register_response.status_code == 201
+
+    employer = (
+        db_session.query(models.User)
+        .filter(models.User.email == "invalid-salary-employer@example.com")
+        .first()
+    )
+    employer.is_verified = True
+    db_session.commit()
+
+    token = login_user(
+        client,
+        email="invalid-salary-employer@example.com",
+        password="supersecret",
+    )
+
+    response = client.post(
+        "/opportunities/",
+        headers=auth_headers(token),
+        json={
+            "title": "Junior Backend Developer",
+            "description": "Работа с Python и FastAPI под руководством опытного наставника.",
+            "type": "job",
+            "work_format": "hybrid",
+            "location": "Москва",
+            "salary_range": "123333222221112233333222112233321321312",
+            "tag_ids": [],
+        },
+    )
+
+    assert response.status_code == 422
+    assert "реалистичное вознаграждение" in response.text
+
+
 def test_employer_can_manage_own_opportunities(client, db_session):
     """Проверяет создание, просмотр, редактирование и удаление своих карточек работодателем."""
     register_response = register_user(
@@ -1419,6 +1462,14 @@ def test_curator_can_verify_employers_and_moderate_opportunities(client, db_sess
     assert moderate_response.json()["is_active"] is False
     assert moderate_response.json()["title"] == "Moderated title"
     assert moderate_response.json()["location"] == "Санкт-Петербург"
+
+    invalid_salary_response = client.patch(
+        f"/curator/opportunities/{opportunity.id}",
+        headers=headers,
+        json={"salary_range": "123333222221112233333222112233321321312"},
+    )
+    assert invalid_salary_response.status_code == 422
+    assert "реалистичное вознаграждение" in invalid_salary_response.text
 
 
 def test_curator_update_retries_geocoding_for_existing_card_without_coordinates(client, db_session, monkeypatch):

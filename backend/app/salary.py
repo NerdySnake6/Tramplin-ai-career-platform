@@ -14,6 +14,7 @@ UNPAID_MARKERS = (
     "волонтер",
     "без вознаграждения",
 )
+MAX_REASONABLE_REWARD = 10_000_000
 
 
 @dataclass(frozen=True)
@@ -44,6 +45,18 @@ def parse_salary_range(value: str | None) -> SalaryInfo:
         maximum = None
 
     return SalaryInfo(min_value=minimum, max_value=maximum, is_paid=not is_unpaid and maximum > 0)
+
+
+def has_unreasonable_salary_number(value: str | None) -> bool:
+    """Проверяет, похоже ли поле зарплаты на случайную или нереалистичную числовую строку."""
+    text = (value or "").strip()
+    if not text:
+        return False
+    numbers_as_text = [item.replace(" ", "") for item in re.findall(r"\d[\d\s]*", text)]
+    if any(len(item) > 9 for item in numbers_as_text):
+        return True
+    info = parse_salary_range(text)
+    return bool(info.max_value is not None and info.max_value > MAX_REASONABLE_REWARD)
 
 
 def matches_salary_filter(value: str | None, salary_filter: str | None) -> bool:

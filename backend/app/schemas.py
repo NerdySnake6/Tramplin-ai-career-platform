@@ -2,9 +2,16 @@
 
 from datetime import datetime
 from typing import Optional, List, Literal
-from pydantic import BaseModel, EmailStr, Field, ConfigDict, computed_field
+from pydantic import BaseModel, EmailStr, Field, ConfigDict, computed_field, field_validator
 
-from app.salary import parse_salary_range
+from app.salary import has_unreasonable_salary_number, parse_salary_range
+
+
+def validate_salary_range_text(value: Optional[str]) -> Optional[str]:
+    """Проверяет, что текстовое поле зарплаты не выглядит как случайная числовая строка."""
+    if has_unreasonable_salary_number(value):
+        raise ValueError("Укажи реалистичное вознаграждение: например, 80 000 рублей или 80 000 - 120 000 рублей.")
+    return value
 
 class UserBase(BaseModel):
     email: EmailStr
@@ -154,6 +161,12 @@ class OpportunityBase(BaseModel):
     event_date: Optional[datetime] = None
     is_active: bool = True
 
+    @field_validator("salary_range")
+    @classmethod
+    def salary_range_must_be_readable(cls, value: Optional[str]) -> Optional[str]:
+        """Проверяет человекочитаемость вознаграждения."""
+        return validate_salary_range_text(value)
+
 
 class OpportunityCreate(OpportunityBase):
     tag_ids: Optional[List[int]] = None
@@ -172,6 +185,12 @@ class OpportunityUpdate(BaseModel):
     event_date: Optional[datetime] = None
     is_active: Optional[bool] = None
     tag_ids: Optional[List[int]] = None
+
+    @field_validator("salary_range")
+    @classmethod
+    def salary_range_must_be_readable(cls, value: Optional[str]) -> Optional[str]:
+        """Проверяет человекочитаемость вознаграждения."""
+        return validate_salary_range_text(value)
 
 
 class OpportunityOut(OpportunityBase):
@@ -218,6 +237,12 @@ class CuratorOpportunityUpdate(BaseModel):
     event_date: Optional[datetime] = None
     is_active: Optional[bool] = None
     tag_ids: Optional[List[int]] = None
+
+    @field_validator("salary_range")
+    @classmethod
+    def salary_range_must_be_readable(cls, value: Optional[str]) -> Optional[str]:
+        """Проверяет человекочитаемость вознаграждения."""
+        return validate_salary_range_text(value)
 
 
 class GeocodeResult(BaseModel):
