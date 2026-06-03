@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from collections import defaultdict, deque
 from datetime import UTC, datetime, timedelta
-from typing import Iterable, NoReturn
+import re
+from typing import Any, Iterable, NoReturn
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import ValidationError
@@ -20,6 +21,7 @@ router = APIRouter(prefix="/ai", tags=["ai"])
 RATE_LIMIT_WINDOW = timedelta(minutes=1)
 RATE_LIMIT_MAX_REQUESTS = 10
 _user_request_log: dict[int, deque[datetime]] = defaultdict(deque)
+BROKEN_TEXT_MARKER = "\ufffd"
 OPPORTUNITY_ASSIST_SCHEMA = {
     "type": "object",
     "additionalProperties": False,
@@ -101,6 +103,22 @@ def text_or_dash(value: object) -> str:
         return "-"
     text = str(value).strip()
     return text or "-"
+
+
+def clean_ai_text(value: str) -> str:
+    """Удаляет артефакты кодировки из текста, возвращенного AI-сервисом."""
+    return re.sub(r"\s+", " ", value.replace(BROKEN_TEXT_MARKER, "")).strip()
+
+
+def clean_ai_payload(value: Any) -> Any:
+    """Рекурсивно очищает текстовые поля структурированного AI-ответа."""
+    if isinstance(value, str):
+        return clean_ai_text(value)
+    if isinstance(value, list):
+        return [clean_ai_payload(item) for item in value]
+    if isinstance(value, dict):
+        return {key: clean_ai_payload(item) for key, item in value.items()}
+    return value
 
 
 def tag_catalog_text(tags: Iterable[models.Tag]) -> str:
@@ -251,6 +269,7 @@ def assist_opportunity(
             response_schema=OPPORTUNITY_ASSIST_SCHEMA,
             schema_name="opportunity_assist",
         )
+        raw = clean_ai_payload(raw)
         parsed = schemas.AIOpportunityAssistRawResponse.model_validate(raw)
     except ValidationError as exc:
         raise HTTPException(
@@ -294,6 +313,7 @@ def review_moderation(
             response_schema=MODERATION_REVIEW_SCHEMA,
             schema_name="moderation_review",
         )
+        raw = clean_ai_payload(raw)
         return schemas.AIModerationReviewResponse.model_validate(raw)
     except ValidationError as exc:
         raise HTTPException(
@@ -336,6 +356,7 @@ def generate_cover_letter(
             response_schema=COVER_LETTER_SCHEMA,
             schema_name="cover_letter",
         )
+        raw = clean_ai_payload(raw)
         return schemas.AICoverLetterResponse.model_validate(raw)
     except ValidationError as exc:
         raise HTTPException(

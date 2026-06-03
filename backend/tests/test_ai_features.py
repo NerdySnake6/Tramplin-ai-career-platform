@@ -190,7 +190,7 @@ def test_curator_can_request_moderation_review(client, db_session, monkeypatch):
         assert "Статус публикации: неактивна" in messages[-1]["content"]
         return {
             "risk_level": "medium",
-            "reasons": ["Не указано вознаграждение"],
+            "reasons": ["Текст м��жет содержать мутные условия"],
             "checklist": ["Проверить юридическое лицо"],
             "recommended_action": "Запросить детали условий перед публикацией.",
         }
@@ -214,7 +214,10 @@ def test_curator_can_request_moderation_review(client, db_session, monkeypatch):
     )
 
     assert response.status_code == 200
-    assert response.json()["risk_level"] == "medium"
+    payload = response.json()
+    assert payload["risk_level"] == "medium"
+    assert "�" not in str(payload)
+    assert payload["reasons"] == ["Текст мжет содержать мутные условия"]
     db_session.refresh(opportunity)
     assert opportunity.is_active is True
 
