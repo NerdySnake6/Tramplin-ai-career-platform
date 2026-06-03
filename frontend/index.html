@@ -172,7 +172,7 @@
                     </div>
                 </div>
             </div>
-            <section class="public-seo-section mb-3" id="publicSeoSection" aria-live="polite" data-route-key="home">
+            <div class="public-seo-section mb-3" id="publicSeoSection" aria-live="polite" data-route-key="home">
                 <article class="public-seo-panel public-seo-home" data-route-key="home">
                     <h2>Карьерная платформа для студентов и молодых специалистов</h2>
                     <p>Трамплин собирает стажировки для студентов, вакансии для начинающих специалистов, карьерные события и менторские возможности в одной публичной витрине.</p>
@@ -185,7 +185,7 @@
                         <a class="public-route-link" href="/about">О проекте</a>
                     </div>
                 </article>
-            </section>
+            </div>
             <div class="row home-stage-row">
                 <div class="col-md-7 mb-3" id="homeMapColumn">
                     <div class="map-panel">
@@ -438,6 +438,7 @@
                                 <div class="col-md-4">
                                     <label class="visually-hidden" for="tagCategoryInput">Категория нового тега</label>
                                     <select class="form-select form-select-sm" id="tagCategoryInput" required>
+                                        <option value="" disabled selected hidden>Выберите категорию...</option>
                                         <option value="tech">Технология</option>
                                         <option value="level">Уровень</option>
                                         <option value="employment_type">Занятость</option>
@@ -643,6 +644,7 @@
                                 <div class="col-md-4">
                                     <label class="visually-hidden" for="curatorTagCategoryInput">Категория нового тега куратора</label>
                                     <select class="form-select form-select-sm" id="curatorTagCategoryInput" required>
+                                        <option value="" disabled selected hidden>Выберите категорию...</option>
                                         <option value="tech">Технология</option>
                                         <option value="level">Уровень</option>
                                         <option value="employment_type">Занятость</option>
@@ -749,6 +751,7 @@
                         <div class="mb-3">
                             <label for="registerRole" class="form-label">Роль</label>
                             <select class="form-select" id="registerRole" required>
+                                <option value="" disabled selected hidden>Выберите роль...</option>
                                 <option value="applicant">Соискатель</option>
                                 <option value="employer">Работодатель</option>
                             </select>
@@ -1022,6 +1025,7 @@
                             <div class="col-md-4">
                                 <label for="curatorOpportunityType" class="form-label">Тип</label>
                                 <select class="form-select" id="curatorOpportunityType" required>
+                                    <option value="" disabled selected hidden>Выберите тип...</option>
                                     <option value="internship">Стажировка</option>
                                     <option value="job">Работа</option>
                                     <option value="mentorship">Менторство</option>
@@ -1031,6 +1035,7 @@
                             <div class="col-md-4">
                                 <label for="curatorOpportunityWorkFormat" class="form-label">Формат</label>
                                 <select class="form-select" id="curatorOpportunityWorkFormat" required>
+                                    <option value="" disabled selected hidden>Выберите формат...</option>
                                     <option value="office">Офис</option>
                                     <option value="hybrid">Гибрид</option>
                                     <option value="remote">Удаленно</option>
@@ -1112,6 +1117,7 @@
                             <div class="col-md-4">
                                 <label for="employerOpportunityType" class="form-label">Тип</label>
                                 <select class="form-select" id="employerOpportunityType" required>
+                                    <option value="" disabled selected hidden>Выберите тип...</option>
                                     <option value="internship">Стажировка</option>
                                     <option value="job">Работа</option>
                                     <option value="mentorship">Менторство</option>
@@ -1121,6 +1127,7 @@
                             <div class="col-md-4">
                                 <label for="employerOpportunityWorkFormat" class="form-label">Формат</label>
                                 <select class="form-select" id="employerOpportunityWorkFormat" required>
+                                    <option value="" disabled selected hidden>Выберите формат...</option>
                                     <option value="office">Офис</option>
                                     <option value="hybrid">Гибрид</option>
                                     <option value="remote">Удаленно</option>
@@ -1198,7 +1205,7 @@
         }
     </script>
     <!-- Yandex.Metrika counter: SEO 100 -->
-    <script type="text/javascript">
+    <script>
         (function(m,e,t,r,i,k,a){
             m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
             m[i].l=1*new Date();
