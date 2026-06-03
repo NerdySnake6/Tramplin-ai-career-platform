@@ -208,6 +208,14 @@ export function createMapController({
                 onSelectOpportunity(opportunity.id);
             });
 
+            placemark.events.add('mouseenter', (e) => {
+                e.get('target').balloon.open();
+            });
+
+            placemark.events.add('mouseleave', (e) => {
+                e.get('target').balloon.close();
+            });
+
             map.geoObjects.add(placemark);
             placemarks.push(placemark);
         });

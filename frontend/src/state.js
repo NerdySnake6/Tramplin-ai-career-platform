@@ -33,6 +33,7 @@ export const state = {
         location: '',
         search: '',
         favorites: '',
+        salary: '',
         tagIds: [],
     },
     opportunityPagination: {

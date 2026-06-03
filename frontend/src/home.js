@@ -40,6 +40,7 @@ export function createHomeController({
             || state.opportunityFilters.location
             || state.opportunityFilters.search
             || state.opportunityFilters.favorites
+            || state.opportunityFilters.salary
             || state.opportunityFilters.tagIds.length
         );
     }
@@ -339,6 +340,29 @@ export function createHomeController({
                 const opportunityTagIds = Array.isArray(opportunity.tags) ? opportunity.tags.map((tag) => tag.id) : [];
                 if (!filters.tagIds.every((tagId) => opportunityTagIds.includes(tagId))) return false;
             }
+            if (filters.salary) {
+                const salaryStr = opportunity.salary_range;
+                if (!salaryStr) return false;
+
+                const parseSalary = (str) => {
+                    const clean = str.replace(/\s+/g, '');
+                    const numbers = clean.match(/\d+/g);
+                    if (!numbers || !numbers.length) return 0;
+                    return Math.max(...numbers.map(Number));
+                };
+
+                const salaryValue = parseSalary(salaryStr);
+                if (filters.salary === 'paid') {
+                    const unpaidKeywords = ['неоплач', 'без оплаты', 'не оплач', 'unpaid'];
+                    const isExplicitlyUnpaid = unpaidKeywords.some((keyword) =>
+                        salaryStr.toLowerCase().includes(keyword)
+                    );
+                    if (isExplicitlyUnpaid || salaryValue <= 0) return false;
+                } else {
+                    const minRequired = Number(filters.salary);
+                    if (salaryValue < minRequired) return false;
+                }
+            }
             if (filters.search) {
                 const tags = Array.isArray(opportunity.tags) ? opportunity.tags.map((tag) => tag.name).join(' ') : '';
                 const text = [
@@ -348,6 +372,7 @@ export function createHomeController({
                     opportunity.location,
                     opportunity.type,
                     opportunity.work_format,
+                    opportunity.salary_range || '',
                     tags,
                 ].join(' ');
                 if (!includesText(text, filters.search)) return false;
@@ -391,6 +416,7 @@ export function createHomeController({
         state.opportunityFilters.location = el('filterLocation').value.trim();
         state.opportunityFilters.search = el('filterSearch').value.trim();
         state.opportunityFilters.favorites = el('filterFavorites').value;
+        state.opportunityFilters.salary = el('filterSalary')?.value || '';
         state.opportunityFilters.tagIds = selectedTagIdsFromContainer('filterTagOptions');
         resetOpportunityPage();
         void loadOpportunities();
@@ -402,6 +428,7 @@ export function createHomeController({
         el('filterLocation').value = '';
         el('filterSearch').value = '';
         el('filterFavorites').value = '';
+        if (el('filterSalary')) el('filterSalary').value = '';
         state.opportunityFilters.tagIds = [];
         renderTagChoices('filterTagOptions', []);
         applyOpportunityFilters();

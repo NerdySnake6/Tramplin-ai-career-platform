@@ -36,9 +36,10 @@ def should_geocode(location: Optional[str], work_format: Optional[str]) -> bool:
     """Определяет, нужно ли выполнять геокодирование локации."""
     if not location:
         return False
-    if work_format == "remote":
+    loc_lower = location.lower()
+    if "удален" in loc_lower or "remote" in loc_lower or "онлайн" in loc_lower or "online" in loc_lower:
         return False
-    return "удален" not in location.lower()
+    return True
 
 
 def resolve_coordinates(

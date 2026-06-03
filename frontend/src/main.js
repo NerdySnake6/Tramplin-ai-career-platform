@@ -476,6 +476,7 @@ function syncPublicRouteFilters() {
     state.opportunityFilters.location = '';
     state.opportunityFilters.search = '';
     state.opportunityFilters.favorites = '';
+    state.opportunityFilters.salary = '';
     state.opportunityFilters.tagIds = [];
     state.opportunityPagination.page = 1;
     state.opportunityPagination.hasNext = false;
@@ -492,6 +493,7 @@ function syncPublicRouteFilters() {
         filterLocation: state.opportunityFilters.location,
         filterSearch: state.opportunityFilters.search,
         filterFavorites: state.opportunityFilters.favorites,
+        filterSalary: state.opportunityFilters.salary,
     };
 
     Object.entries(fields).forEach(([id, value]) => {
@@ -1705,6 +1707,7 @@ function bindEvents() {
     el('filterLocation').addEventListener('input', debouncedApplyOpportunityFilters);
     el('filterSearch').addEventListener('input', debouncedApplyOpportunityFilters);
     el('filterFavorites').addEventListener('change', applyOpportunityFilters);
+    el('filterSalary').addEventListener('change', applyOpportunityFilters);
     el('filterResetBtn').addEventListener('click', resetOpportunityFilters);
     el('employerResponseStatusFilter').addEventListener('change', applyEmployerResponseFilters);
     el('employerResponseSearch').addEventListener('input', applyEmployerResponseFilters);
