@@ -1768,8 +1768,33 @@ function bindEvents() {
     });
     el('curatorOpportunitySearch').addEventListener('input', debouncedLoadCuratorOpportunitiesBySearch);
 
+    setupClipboardCopy('copyCoverLetterBtn', 'coverLetter');
+    setupClipboardCopy('copyEmployerDescriptionBtn', 'employerOpportunityDescription');
+
     window.addEventListener('popstate', () => {
         navigateToPublicPath(window.location.pathname, { replace: true });
+    });
+}
+
+function setupClipboardCopy(buttonId, textareaId) {
+    const button = el(buttonId);
+    const textarea = el(textareaId);
+    if (!button || !textarea) return;
+    button.addEventListener('click', () => {
+        const text = textarea.value;
+        if (!text) return;
+        navigator.clipboard.writeText(text).then(() => {
+            const originalText = button.textContent;
+            button.textContent = '✓ Скопировано!';
+            button.classList.add('text-success');
+            setTimeout(() => {
+                button.textContent = originalText;
+                button.classList.remove('text-success');
+            }, 2000);
+        }).catch(err => {
+            console.error('Failed to copy text: ', err);
+            showNotice('danger', 'Не удалось скопировать текст в буфер обмена.');
+        });
     });
 }
 

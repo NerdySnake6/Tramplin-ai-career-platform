@@ -169,8 +169,19 @@ export function createCuratorController({
             refreshBtn.classList.add('d-none');
             createBtn.classList.add('d-none');
             adminHint.textContent = 'Здесь можно модерировать пользователей, карточки и справочник тегов.';
-            usersContainer.appendChild(createEl('p', 'text-muted mb-0', 'Войди как куратор, чтобы модерировать пользователей.'));
-            opportunitiesContainer.appendChild(createEl('p', 'text-muted mb-0', 'Карточки для модерации появятся здесь.'));
+            
+            const emptyUsers = createEl('div', 'empty-state-panel');
+            emptyUsers.appendChild(createEl('div', 'empty-state-icon', '👤'));
+            emptyUsers.appendChild(createEl('div', 'fw-semibold', 'Необходима роль куратора'));
+            emptyUsers.appendChild(createEl('div', 'text-muted small', 'Войди как куратор, чтобы модерировать пользователей.'));
+            usersContainer.appendChild(emptyUsers);
+            
+            const emptyOpps = createEl('div', 'empty-state-panel');
+            emptyOpps.appendChild(createEl('div', 'empty-state-icon', '📋'));
+            emptyOpps.appendChild(createEl('div', 'fw-semibold', 'Необходима роль куратора'));
+            emptyOpps.appendChild(createEl('div', 'text-muted small', 'Карточки для модерации появятся здесь после авторизации.'));
+            opportunitiesContainer.appendChild(emptyOpps);
+            
             renderWorkspaceHero();
             return;
         }
@@ -188,7 +199,22 @@ export function createCuratorController({
 
         const filteredUsers = getFilteredCuratorUsers();
         if (!filteredUsers.length) {
-            usersContainer.appendChild(createEl('p', 'text-muted mb-0', 'Пользователи по текущим фильтрам не найдены.'));
+            const emptyUsers = createEl('div', 'empty-state-panel');
+            emptyUsers.appendChild(createEl('div', 'empty-state-icon', '🔍'));
+            emptyUsers.appendChild(createEl('div', 'fw-semibold', 'Пользователи не найдены'));
+            emptyUsers.appendChild(createEl('div', 'text-muted small', 'Попробуйте изменить параметры поиска или сбросить фильтры.'));
+            
+            const resetBtn = createEl('button', 'btn btn-sm btn-outline-primary mt-2', 'Сбросить фильтры');
+            resetBtn.type = 'button';
+            resetBtn.addEventListener('click', () => {
+                el('curatorSearch').value = '';
+                el('curatorUserRoleFilter').value = '';
+                state.curatorFilters.userSearch = '';
+                state.curatorFilters.role = '';
+                void loadCuratorData();
+            });
+            emptyUsers.appendChild(resetBtn);
+            usersContainer.appendChild(emptyUsers);
         } else {
             filteredUsers.forEach((user) => {
                 const item = createEl('div', 'moderation-item py-2');
@@ -267,7 +293,22 @@ export function createCuratorController({
 
         const filteredOpportunities = getFilteredCuratorOpportunities();
         if (!filteredOpportunities.length) {
-            opportunitiesContainer.appendChild(createEl('p', 'text-muted mb-0', 'Карточки по текущим фильтрам не найдены.'));
+            const emptyOpps = createEl('div', 'empty-state-panel');
+            emptyOpps.appendChild(createEl('div', 'empty-state-icon', '🔍'));
+            emptyOpps.appendChild(createEl('div', 'fw-semibold', 'Карточки не найдены'));
+            emptyOpps.appendChild(createEl('div', 'text-muted small', 'Попробуйте изменить параметры поиска или сбросить фильтры.'));
+            
+            const resetBtn = createEl('button', 'btn btn-sm btn-outline-primary mt-2', 'Сбросить фильтры');
+            resetBtn.type = 'button';
+            resetBtn.addEventListener('click', () => {
+                el('curatorOpportunitySearch').value = '';
+                el('curatorOpportunityStatusFilter').value = '';
+                state.curatorFilters.opportunitySearch = '';
+                state.curatorFilters.opportunityStatus = '';
+                void loadCuratorData();
+            });
+            emptyOpps.appendChild(resetBtn);
+            opportunitiesContainer.appendChild(emptyOpps);
             renderWorkspaceHero();
             return;
         }

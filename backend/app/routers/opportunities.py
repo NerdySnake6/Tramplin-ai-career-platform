@@ -61,6 +61,47 @@ def extract_coordinates_from_text(text: Optional[str]) -> tuple[Optional[float],
     return None, None
 
 
+def fallback_coordinates(location: Optional[str]) -> tuple[float, float]:
+    """Генерирует координаты-заглушки для популярных городов РФ со случайным смещением."""
+    import random
+    loc_str = (location or "").lower()
+    
+    # Координаты центров городов
+    cities = {
+        "москва": (55.7558, 37.6173),
+        "московск": (55.7558, 37.6173),
+        "петербург": (59.9343, 30.3351),
+        "питер": (59.9343, 30.3351),
+        "спб": (59.9343, 30.3351),
+        "новосибирск": (55.0084, 82.9357),
+        "казань": (55.8304, 49.0661),
+        "нижний новгород": (56.3269, 44.0059),
+        "екатеринбург": (56.8389, 60.6057),
+        "челябинск": (55.1644, 61.4368),
+        "самара": (53.2001, 50.15),
+        "омск": (54.9885, 73.324),
+        "ростов": (47.2357, 39.7015),
+        "уфа": (54.735, 55.9587),
+        "красноярск": (56.0153, 92.8932),
+        "пермь": (58.0105, 56.2502),
+        "воронеж": (51.6608, 39.2006),
+        "волгоград": (48.7194, 44.5018),
+    }
+    
+    base_lat, base_lng = 55.7558, 37.6173  # Дефолт: Москва
+    for city, coords in cities.items():
+        if city in loc_str:
+            base_lat, base_lng = coords
+            break
+            
+    # Добавляем небольшой случайный сдвиг в пределах ~1.5 км,
+    # чтобы маркеры на карте не перекрывали друг друга
+    random_lat = base_lat + random.uniform(-0.015, 0.015)
+    random_lng = base_lng + random.uniform(-0.015, 0.015)
+    
+    return random_lat, random_lng
+
+
 def resolve_coordinates(
     location: Optional[str],
     work_format: Optional[str],
@@ -79,16 +120,16 @@ def resolve_coordinates(
         return None, None
 
     if not geocoder_is_configured():
-        return lat, lng
+        return fallback_coordinates(location)
 
     try:
         result = geocode_address(location)
     except GeocodingError as exc:
         logger.warning("Geocoding failed for '%s': %s", location, exc)
-        return lat, lng
+        return fallback_coordinates(location)
 
     if not result:
-        return lat, lng
+        return fallback_coordinates(location)
 
     return result["lat"], result["lng"]
 

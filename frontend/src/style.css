@@ -18,47 +18,64 @@ body {
     background-color: var(--primary-color) !important;
     border-color: var(--primary-color) !important;
 }
-.btn-primary:hover, .btn-primary:focus, .btn-primary:active {
+
+.btn-primary:hover,
+.btn-primary:focus,
+.btn-primary:active {
     background-color: var(--primary-hover) !important;
     border-color: var(--primary-hover) !important;
 }
+
 .btn-outline-primary {
     color: var(--primary-color) !important;
     border-color: var(--primary-color) !important;
 }
-.btn-outline-primary:hover, .btn-outline-primary:focus, .btn-outline-primary:active {
+
+.btn-outline-primary:hover,
+.btn-outline-primary:focus,
+.btn-outline-primary:active {
     background-color: var(--primary-color) !important;
     border-color: var(--primary-color) !important;
     color: #fff !important;
 }
+
 .text-primary {
     color: var(--primary-color) !important;
 }
+
 .border-primary {
     border-color: var(--primary-color) !important;
 }
+
 .bg-primary {
     background-color: var(--primary-color) !important;
 }
+
 .bg-indigo {
     background-color: var(--primary-color) !important;
 }
+
 .navbar.bg-primary {
     background-color: #4f46e5 !important;
 }
 
 /* Card and List Item Polishing */
-.card, .list-group-item, .modal-content, .offcanvas {
+.card,
+.list-group-item,
+.modal-content,
+.offcanvas {
     border-radius: 12px !important;
     border: 1px solid #e2e8f0 !important;
 }
 
-.employer-home-opportunity-card, .list-group-item.opportunity-item {
+.employer-home-opportunity-card,
+.list-group-item.opportunity-item {
     transition: transform 0.2s ease, box-shadow 0.2s ease !important;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05) !important;
 }
 
-.employer-home-opportunity-card:hover, .list-group-item.opportunity-item:hover {
+.employer-home-opportunity-card:hover,
+.list-group-item.opportunity-item:hover {
     transform: translateY(-2px) !important;
     box-shadow: 0 10px 15px -3px rgba(99, 102, 241, 0.1), 0 4px 6px -4px rgba(99, 102, 241, 0.1) !important;
 }
@@ -91,6 +108,7 @@ body {
     0% {
         background-position: 200% 0;
     }
+
     100% {
         background-position: -200% 0;
     }
@@ -180,7 +198,7 @@ body {
     flex-direction: column;
 }
 
-#workspaceContentColumn > .card {
+#workspaceContentColumn>.card {
     width: 100%;
 }
 
@@ -315,6 +333,7 @@ body {
     padding: 0;
     align-self: flex-start;
 }
+
 .app-toast-close:hover {
     opacity: 1;
 }
@@ -369,12 +388,14 @@ body {
     from {
         transform: scaleX(1);
     }
+
     to {
         transform: scaleX(0);
     }
 }
 
 @media (prefers-reduced-motion: reduce) {
+
     .app-toast,
     .app-toast.show,
     .app-toast-exit {
@@ -1098,7 +1119,7 @@ body {
     align-items: stretch;
 }
 
-.home-stage-row #homeListHeader > div {
+.home-stage-row #homeListHeader>div {
     max-width: 34rem;
 }
 
@@ -1281,19 +1302,19 @@ body {
     background: transparent;
 }
 
-.response-item + .response-item {
+.response-item+.response-item {
     border-top: 1px solid #e9ecef;
 }
 
-.opportunity-manage-item + .opportunity-manage-item {
+.opportunity-manage-item+.opportunity-manage-item {
     border-top: 1px solid #e9ecef;
 }
 
-.contact-item + .contact-item {
+.contact-item+.contact-item {
     border-top: 1px solid #e9ecef;
 }
 
-.moderation-item + .moderation-item {
+.moderation-item+.moderation-item {
     border-top: 1px solid #e9ecef;
 }
 
@@ -1334,28 +1355,39 @@ body {
     background: #fff3cd;
 }
 
+.opportunity-popup {
+    font-family: 'Inter', sans-serif;
+}
+
 .opportunity-popup h6 {
+    font-size: 0.95rem;
+    font-weight: 600;
     margin-bottom: 4px;
-    color: #0d6efd;
+    color: #4f46e5;
     overflow-wrap: anywhere;
     word-break: break-word;
 }
 
 .opportunity-popup .company {
+    font-size: 0.85rem;
     font-weight: 500;
     margin-bottom: 4px;
+    color: #334155;
     overflow-wrap: anywhere;
     word-break: break-word;
 }
 
 .opportunity-popup .salary {
-    color: #28a745;
-    font-weight: 500;
+    color: #0f766e;
+    font-weight: 600;
+    font-size: 0.85rem;
+    margin-bottom: 4px;
 }
 
 .opportunity-popup .tags {
-    font-size: 0.85rem;
-    color: #6c757d;
+    font-size: 0.8rem;
+    color: #64748b;
+    margin-bottom: 4px;
     overflow-wrap: anywhere;
     word-break: break-word;
 }
@@ -1376,23 +1408,28 @@ body {
 .empty-state-panel {
     display: flex;
     flex-direction: column;
-    align-items: flex-start;
+    align-items: center;
+    text-align: center;
     gap: 0.75rem;
-    padding: 1.25rem;
+    padding: 2rem 1.5rem;
     border-radius: 16px;
-    background: linear-gradient(180deg, #f8fbff, #ffffff);
+    background: linear-gradient(180deg, #f5f3ff, #ffffff);
+    border: 1px dashed #c0bbf0;
+    width: 100%;
+    margin: 1rem 0;
 }
 
 .empty-state-icon {
-    width: 42px;
-    height: 42px;
-    border-radius: 14px;
+    width: 48px;
+    height: 48px;
+    border-radius: 16px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    background: #e7f0ff;
-    color: #0d6efd;
-    font-size: 1.1rem;
+    background: #ede9fe;
+    color: #6366f1;
+    font-size: 1.3rem;
+    box-shadow: 0 4px 6px -1px rgba(99, 102, 241, 0.1), 0 2px 4px -2px rgba(99, 102, 241, 0.1);
 }
 
 .favorites-summary {
@@ -1911,6 +1948,7 @@ body {
 }
 
 @media (max-width: 768px) {
+
     #homeMapColumn,
     #workspaceContentColumn {
         display: block;
@@ -1926,6 +1964,7 @@ body {
         padding-bottom: 5px;
         scrollbar-width: none;
     }
+
     .navbar-workspace-tabs::-webkit-scrollbar {
         display: none;
     }
@@ -2218,4 +2257,28 @@ body {
     color: #334155;
 }
 
+/* Custom elegant scrollbars */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
 
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background-color: #cbd5e1;
+    border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background-color: #94a3b8;
+}
+
+/* Brand Indigo input focus state overrides */
+.form-control:focus,
+.form-select:focus {
+    border-color: rgba(99, 102, 241, 0.6) !important;
+    box-shadow: 0 0 0 0.25rem rgba(99, 102, 241, 0.25) !important;
+}

@@ -26,7 +26,7 @@ def upgrade() -> None:
         batch_op.add_column(sa.Column("email_verification_sent_at", sa.DateTime(), nullable=True))
         batch_op.add_column(sa.Column("email_verified_at", sa.DateTime(), nullable=True))
 
-    op.execute("UPDATE users SET is_email_verified = 1 WHERE is_email_verified IS NULL")
+    op.execute("UPDATE users SET is_email_verified = TRUE WHERE is_email_verified IS NULL")
 
     with op.batch_alter_table("users", schema=None) as batch_op:
         batch_op.alter_column("is_email_verified", existing_type=sa.Boolean(), nullable=False)

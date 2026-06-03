@@ -17,12 +17,26 @@ from app.models import Base
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
 ALEMBIC_CONFIG_PATH = BACKEND_DIR / "alembic.ini"
-DATABASE_PATH = Path(os.getenv("TRAMPLIN_DATABASE_PATH", BACKEND_DIR / "tramplin.db")).resolve()
-SQLALCHEMY_DATABASE_URL = f"sqlite:///{DATABASE_PATH}"
+
+# Поддерживаем DATABASE_URL (например, для PostgreSQL) с автоматической заменой устаревшего postgres:// на postgresql://
+SQLALCHEMY_DATABASE_URL = os.getenv("TRAMPLIN_DATABASE_URL") or os.getenv("DATABASE_URL")
+if not SQLALCHEMY_DATABASE_URL:
+    db_user = os.getenv("POSTGRES_USER", "tramplin_user")
+    db_password = os.getenv("POSTGRES_PASSWORD", "tramplin_password")
+    db_host = os.getenv("POSTGRES_HOST", "localhost")
+    db_port = os.getenv("POSTGRES_PORT", "5432")
+    db_name = os.getenv("POSTGRES_DB", "tramplin_db")
+    SQLALCHEMY_DATABASE_URL = f"postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
+else:
+    if SQLALCHEMY_DATABASE_URL.startswith("postgres://"):
+        SQLALCHEMY_DATABASE_URL = SQLALCHEMY_DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
+is_sqlite = SQLALCHEMY_DATABASE_URL.startswith("sqlite")
+connect_args = {"check_same_thread": False} if is_sqlite else {}
 
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL, 
-    connect_args={"check_same_thread": False}
+    connect_args=connect_args
 )
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

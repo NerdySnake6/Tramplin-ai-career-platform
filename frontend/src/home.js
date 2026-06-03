@@ -60,11 +60,11 @@ export function createHomeController({
         }
 
         if (!opportunities.length) {
-            const emptyState = createEl('div', 'card shadow-sm border-0 employer-home-empty');
-            const body = createEl('div', 'card-body py-3');
-            body.appendChild(createEl('div', 'home-section-title mb-2', 'Карточки возможностей'));
-            body.appendChild(createEl('p', 'text-muted mb-0', hasActiveOpportunityFilters() ? 'По текущим фильтрам карточки не найдены.' : 'Когда появятся новые возможности, они будут показаны здесь в верхней сетке.'));
-            emptyState.appendChild(body);
+            const emptyState = createEl('div', 'empty-state-panel border-0 bg-transparent py-4 my-2');
+            const icon = hasActiveOpportunityFilters() ? '🔍' : '✨';
+            emptyState.appendChild(createEl('div', 'empty-state-icon mb-2', icon));
+            emptyState.appendChild(createEl('div', 'fw-semibold', hasActiveOpportunityFilters() ? 'По текущим фильтрам ничего не найдено' : 'Пока нет опубликованных возможностей'));
+            emptyState.appendChild(createEl('div', 'text-muted small', 'Вы можете сбросить фильтры ниже, чтобы увидеть все доступные предложения.'));
             container.appendChild(emptyState);
             return;
         }
@@ -215,7 +215,8 @@ export function createHomeController({
 
         if (!opportunities.length) {
             const panel = createEl('div', 'empty-state-panel');
-            panel.appendChild(createEl('div', 'empty-state-icon', '✦'));
+            const icon = hasActiveOpportunityFilters() ? '🔍' : '✨';
+            panel.appendChild(createEl('div', 'empty-state-icon', icon));
             panel.appendChild(createEl('div', 'fw-semibold', hasActiveOpportunityFilters() ? 'По текущим фильтрам ничего не найдено' : 'Пока нет опубликованных возможностей'));
             panel.appendChild(
                 createEl(
@@ -227,12 +228,12 @@ export function createHomeController({
                 )
             );
             if (hasActiveOpportunityFilters()) {
-                const resetBtn = createEl('button', 'btn btn-sm btn-outline-primary', 'Сбросить фильтры');
+                const resetBtn = createEl('button', 'btn btn-sm btn-outline-primary mt-2', 'Сбросить фильтры');
                 resetBtn.type = 'button';
                 resetBtn.addEventListener('click', resetOpportunityFilters);
                 panel.appendChild(resetBtn);
             } else {
-                panel.appendChild(createEl('div', 'small text-muted', 'Начать можно с регистрации или изучения карты.'));
+                panel.appendChild(createEl('div', 'small text-muted mt-2', 'Начать можно с регистрации или изучения карты.'));
             }
             list.appendChild(panel);
             return;
@@ -472,7 +473,11 @@ export function createHomeController({
         badge.textContent = String(favoriteOpportunities.length + favoriteCompanies.length);
 
         if (!favoriteOpportunities.length && !favoriteCompanies.length) {
-            container.appendChild(createEl('p', 'text-muted mb-0', 'Пока ничего не добавлено в избранное.'));
+            const emptyState = createEl('div', 'empty-state-panel p-3 border-0 bg-transparent');
+            emptyState.appendChild(createEl('div', 'empty-state-icon mb-2', '🤍'));
+            emptyState.appendChild(createEl('div', 'fw-semibold small', 'Избранное пусто'));
+            emptyState.appendChild(createEl('div', 'text-muted small', 'Добавляй интересные вакансии и компании, чтобы быстро возвращаться к ним.'));
+            container.appendChild(emptyState);
             return;
         }
 

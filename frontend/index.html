@@ -782,7 +782,10 @@
                             <div class="small mt-2 d-none" id="coverLetterAiResult"></div>
                         </div>
                         <div class="mb-0">
-                            <label for="coverLetter" class="form-label">Сопроводительное письмо</label>
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <label for="coverLetter" class="form-label mb-0">Сопроводительное письмо</label>
+                                <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none d-none" id="copyCoverLetterBtn" style="font-size: 0.8rem;">📋 Скопировать</button>
+                            </div>
                             <textarea class="form-control" id="coverLetter" rows="5" placeholder="Коротко расскажи, почему эта возможность тебе подходит."></textarea>
                         </div>
                     </div>
@@ -1108,7 +1111,10 @@
                                 </div>
                             </div>
                             <div class="col-12">
-                                <label for="employerOpportunityDescription" class="form-label">Описание</label>
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <label for="employerOpportunityDescription" class="form-label mb-0">Описание</label>
+                                    <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none d-none" id="copyEmployerDescriptionBtn" style="font-size: 0.8rem;">📋 Скопировать</button>
+                                </div>
                                 <textarea class="form-control" id="employerOpportunityDescription" rows="6" minlength="20" required></textarea>
                             </div>
                             <div class="col-12">

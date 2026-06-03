@@ -61,11 +61,9 @@ def test_init_db_requires_applied_migrations(tmp_path, monkeypatch):
     engine.dispose()
 
 
-def test_default_sqlite_url_is_bound_to_backend_directory():
-    """Проверяет, что runtime-URL SQLite не зависит от текущей рабочей директории."""
-    expected_db_path = (BACKEND_DIR / "tramplin.db").resolve()
-    assert database.DATABASE_PATH == expected_db_path
-    assert database.SQLALCHEMY_DATABASE_URL == f"sqlite:///{expected_db_path}"
+def test_default_postgres_url():
+    """Проверяет, что дефолтный URL базы данных ведет на PostgreSQL."""
+    assert database.SQLALCHEMY_DATABASE_URL.startswith("postgresql://")
 
 
 def test_init_db_rejects_schema_created_via_create_all(tmp_path, monkeypatch):

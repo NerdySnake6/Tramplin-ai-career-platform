@@ -84,13 +84,27 @@ export function createEmployerController({
         const filteredResponses = getFilteredEmployerResponses();
 
         if (!state.employerResponses.length) {
-            container.appendChild(createEl('p', 'text-muted mb-0', 'Пока нет входящих откликов.'));
+            const emptyState = createEl('div', 'empty-state-panel');
+            emptyState.appendChild(createEl('div', 'empty-state-icon', '📬'));
+            emptyState.appendChild(createEl('div', 'fw-semibold', 'Входящих откликов пока нет'));
+            emptyState.appendChild(createEl('div', 'text-muted small', 'Здесь появятся отклики соискателей после публикации ваших вакансий и мероприятий.'));
+            container.appendChild(emptyState);
             renderWorkspaceHero();
             return;
         }
 
         if (!filteredResponses.length) {
-            container.appendChild(createEl('p', 'text-muted mb-0', 'По текущим фильтрам откликов не найдено.'));
+            const emptyState = createEl('div', 'empty-state-panel');
+            emptyState.appendChild(createEl('div', 'empty-state-icon', '🔍'));
+            emptyState.appendChild(createEl('div', 'fw-semibold', 'Откликов не найдено'));
+            emptyState.appendChild(createEl('div', 'text-muted small', 'Попробуйте изменить параметры поиска или сбросить фильтры.'));
+            
+            const resetBtn = createEl('button', 'btn btn-sm btn-outline-primary mt-2', 'Сбросить фильтры');
+            resetBtn.type = 'button';
+            resetBtn.addEventListener('click', resetEmployerResponseFilters);
+            emptyState.appendChild(resetBtn);
+            
+            container.appendChild(emptyState);
             renderWorkspaceHero();
             return;
         }
@@ -305,6 +319,7 @@ export function createEmployerController({
             if (defaultLocation) {
                 el('employerOpportunityLocation').value = defaultLocation;
             }
+            el('copyEmployerDescriptionBtn')?.classList.add('d-none');
             refreshFieldCounters();
             getEmployerOpportunityModal().show();
             return;
@@ -324,6 +339,7 @@ export function createEmployerController({
         el('employerOpportunityExpiresAt').value = toDateTimeLocalValue(opportunity.expires_at);
         el('employerOpportunityEventDate').value = toDateTimeLocalValue(opportunity.event_date);
         el('employerOpportunityDescription').value = opportunity.description || '';
+        el('copyEmployerDescriptionBtn')?.classList.toggle('d-none', !(opportunity.description || '').trim());
         el('employerOpportunityActive').checked = Boolean(opportunity.is_active);
         renderEmployerOpportunityAiResult(null);
         renderTagChoices(
@@ -448,6 +464,7 @@ export function createEmployerController({
             const result = await response.json();
             if (result.description) {
                 el('employerOpportunityDescription').value = result.description;
+                el('copyEmployerDescriptionBtn')?.classList.remove('d-none');
             }
             if (Array.isArray(result.suggested_tags) && result.suggested_tags.length) {
                 renderTagChoices('employerOpportunityTagOptions', result.suggested_tags.map((tag) => tag.id));

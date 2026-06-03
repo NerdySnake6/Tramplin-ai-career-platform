@@ -407,6 +407,7 @@ export function createApplicantController({
         state.pendingApplyId = opportunityId;
         el('applyOpportunityMeta').textContent = `${opportunity.title} | ${opportunity.location}`;
         el('coverLetter').value = '';
+        el('copyCoverLetterBtn')?.classList.add('d-none');
         renderCoverLetterAiResult(null);
         refreshFieldCounters();
         getApplyModal().show();
@@ -481,6 +482,7 @@ export function createApplicantController({
 
             const result = await response.json();
             el('coverLetter').value = result.cover_letter || '';
+            el('copyCoverLetterBtn')?.classList.remove('d-none');
             renderCoverLetterAiResult(result);
             refreshFieldCounters();
             showNotice('success', 'AI подготовил черновик письма. Проверь текст перед отправкой.');
