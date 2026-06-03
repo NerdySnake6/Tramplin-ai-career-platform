@@ -92,9 +92,9 @@ export function createHomeController({
             const badges = createEl('div', 'd-flex flex-wrap justify-content-end gap-1');
             badges.appendChild(createEl('small', 'opportunity-status-chip opportunity-type-chip', opportunityTypeLabel(opportunity.type)));
             if (opportunity.employer_is_verified) {
-                badges.appendChild(createEl('small', 'opportunity-status-chip bg-success text-white', '✓ Проверен куратором'));
+                badges.appendChild(createEl('small', 'opportunity-status-chip bg-success', '✓ Проверен куратором'));
             }
-            badges.appendChild(createEl('small', 'opportunity-status-chip bg-indigo text-white', '🤖 AI-проверка'));
+            badges.appendChild(createEl('small', 'opportunity-status-chip bg-indigo', '🤖 AI-проверка'));
             top.appendChild(badges);
             body.appendChild(top);
 
@@ -180,9 +180,7 @@ export function createHomeController({
                 state.selectedOpportunityId = opportunity.id;
                 centerOnOpportunity(opportunity);
                 renderOpportunitiesSection();
-                if (!state.currentUser || state.currentUser.role === 'applicant') {
-                    openOpportunityDetailsModal(opportunity.id);
-                }
+                openOpportunityDetailsModal(opportunity.id);
             });
 
             container.appendChild(card);
@@ -263,9 +261,9 @@ export function createHomeController({
             const badges = createEl('div', 'd-flex flex-wrap gap-1 justify-content-end align-items-start');
             badges.appendChild(createEl('small', 'opportunity-status-chip opportunity-type-chip', opportunityTypeLabel(opportunity.type)));
             if (opportunity.employer_is_verified) {
-                badges.appendChild(createEl('small', 'badge bg-success text-white', '✓ Проверено'));
+                badges.appendChild(createEl('small', 'opportunity-status-chip bg-success', '✓ Проверено'));
             }
-            badges.appendChild(createEl('small', 'badge bg-indigo text-white', '🤖 AI'));
+            badges.appendChild(createEl('small', 'opportunity-status-chip bg-indigo', '🤖 AI'));
             if (favoriteOpportunity) {
                 badges.appendChild(createEl('small', 'badge text-bg-danger', 'Избр. вакансия'));
             } else if (favoriteCompany) {
@@ -291,9 +289,7 @@ export function createHomeController({
                 state.selectedOpportunityId = opportunity.id;
                 renderOpportunitiesSection();
                 centerOnOpportunity(opportunity);
-                if (!state.currentUser || state.currentUser.role === 'applicant') {
-                    openOpportunityDetailsModal(opportunity.id);
-                }
+                openOpportunityDetailsModal(opportunity.id);
             });
 
             list.appendChild(item);

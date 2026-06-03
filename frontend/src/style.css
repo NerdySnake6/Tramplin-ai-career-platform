@@ -137,7 +137,7 @@ body {
 }
 
 .navbar.bg-primary {
-    background-color: #0b5ed7 !important;
+    background-color: #4f46e5 !important;
 }
 
 .nav-button-link {
@@ -864,28 +864,37 @@ body {
 }
 
 .navbar-workspace-tabs .btn {
-    border-color: rgba(255, 255, 255, 0.28);
-    background: transparent;
-    color: #fff;
     font-weight: 700;
 }
 
-.navbar-workspace-tabs .btn:hover,
-.navbar-workspace-tabs .btn:focus-visible {
-    background: rgba(255, 255, 255, 0.14);
-    color: #fff;
-    border-color: rgba(255, 255, 255, 0.4);
-}
-
+/* Active tab button styling */
 .navbar-workspace-tabs .btn.btn-primary {
-    background: #fff;
-    border-color: #fff;
-    color: #084298;
-    box-shadow: none;
+    background-color: #ffffff !important;
+    color: #4f46e5 !important;
+    border-color: #ffffff !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
 }
 
+.navbar-workspace-tabs .btn.btn-primary:hover,
+.navbar-workspace-tabs .btn.btn-primary:focus-visible {
+    background-color: #f1f5f9 !important;
+    color: #4f46e5 !important;
+    border-color: #f1f5f9 !important;
+}
+
+/* Inactive tab button styling */
 .navbar-workspace-tabs .btn.btn-outline-primary {
-    box-shadow: none;
+    background-color: transparent !important;
+    color: #ffffff !important;
+    border-color: rgba(255, 255, 255, 0.4) !important;
+    box-shadow: none !important;
+}
+
+.navbar-workspace-tabs .btn.btn-outline-primary:hover,
+.navbar-workspace-tabs .btn.btn-outline-primary:focus-visible {
+    background-color: rgba(255, 255, 255, 0.15) !important;
+    color: #ffffff !important;
+    border-color: rgba(255, 255, 255, 0.75) !important;
 }
 
 .map-stage {
@@ -1169,11 +1178,26 @@ body {
     border: 1px solid transparent;
 }
 
-.opportunity-type-chip {
-    background: #ffffff;
-    color: #22324a;
-    border-color: #d1dbea;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+/* Soft Pastel Theme for all three chips */
+.opportunity-status-chip.opportunity-type-chip {
+    background-color: #e0f2fe !important;
+    color: #0369a1 !important;
+    border: 1px solid #bae6fd !important;
+    box-shadow: none !important;
+}
+
+.opportunity-status-chip.bg-success {
+    background-color: #dcfce7 !important;
+    color: #15803d !important;
+    border: 1px solid #bbf7d0 !important;
+    box-shadow: none !important;
+}
+
+.opportunity-status-chip.bg-indigo {
+    background-color: #e0e7ff !important;
+    color: #4338ca !important;
+    border: 1px solid #c7d2fe !important;
+    box-shadow: none !important;
 }
 
 .map-focus-badge {
@@ -1956,4 +1980,98 @@ body {
     .guest-guide-step {
         grid-template-columns: 1.8rem 1fr;
     }
+}
+
+/* Favorites Buttons styling */
+.btn-outline-danger {
+    background-color: #fff1f2 !important;
+    color: #be123c !important;
+    border-color: #fecdd3 !important;
+    font-weight: 600 !important;
+}
+
+.btn-outline-danger:hover,
+.btn-outline-danger:focus,
+.btn-outline-danger:active {
+    background-color: #ffe4e6 !important;
+    color: #9f1239 !important;
+    border-color: #fda4af !important;
+}
+
+.btn-outline-warning {
+    background-color: #fffbeb !important;
+    color: #b45309 !important;
+    border-color: #fef3c7 !important;
+    font-weight: 600 !important;
+}
+
+.btn-outline-warning:hover,
+.btn-outline-warning:focus,
+.btn-outline-warning:active {
+    background-color: #fef3c7 !important;
+    color: #92400e !important;
+    border-color: #fde68a !important;
+}
+
+.btn-danger {
+    background-color: #e11d48 !important;
+    border-color: #e11d48 !important;
+    color: #ffffff !important;
+    font-weight: 600 !important;
+}
+
+.btn-danger:hover,
+.btn-danger:focus,
+.btn-danger:active {
+    background-color: #be123c !important;
+    border-color: #be123c !important;
+    color: #ffffff !important;
+}
+
+.btn-warning {
+    background-color: #d97706 !important;
+    border-color: #d97706 !important;
+    color: #ffffff !important;
+    font-weight: 600 !important;
+}
+
+.btn-warning:hover,
+.btn-warning:focus,
+.btn-warning:active {
+    background-color: #b45309 !important;
+    border-color: #b45309 !important;
+    color: #ffffff !important;
+}
+
+/* Filter Card Font Size Adjustments */
+#homeFiltersCard {
+    font-size: 0.95rem !important;
+}
+
+#homeFiltersCard .form-select-sm,
+#homeFiltersCard .form-control-sm {
+    font-size: 0.925rem !important;
+    padding-top: 0.35rem !important;
+    padding-bottom: 0.35rem !important;
+}
+
+#homeFiltersCard .home-section-title {
+    font-size: 0.85rem !important;
+}
+
+#homeFiltersCard summary {
+    font-size: 0.95rem !important;
+}
+
+#homeFiltersCard .tag-choice {
+    font-size: 0.9rem !important;
+    padding: 0.35rem 0.75rem !important;
+}
+
+#homeFiltersCard #filterResetBtn {
+    font-size: 0.9rem !important;
+}
+
+#homeFiltersCard .text-muted {
+    font-size: 0.9rem !important;
 }
