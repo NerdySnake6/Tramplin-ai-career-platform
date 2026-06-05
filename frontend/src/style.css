@@ -2372,3 +2372,145 @@ body {
     border-color: rgba(99, 102, 241, 0.6) !important;
     box-shadow: 0 0 0 0.25rem rgba(99, 102, 241, 0.25) !important;
 }
+
+/* Restructured Advanced Filters */
+.filter-tags-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.filter-section {
+    background: #ffffff;
+    border: 1px solid #e4ecf7;
+    border-radius: 12px;
+    padding: 0.85rem 1rem;
+    transition: all 0.2s ease;
+}
+
+.filter-section:hover {
+    border-color: #cbdcf2;
+    box-shadow: 0 4px 12px rgba(31, 42, 55, 0.03);
+}
+
+.filter-section-title {
+    font-size: 0.85rem;
+    font-weight: 800;
+    color: #243447;
+    margin-bottom: 0.65rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.filter-section-subtitle {
+    font-size: 0.72rem;
+    font-weight: 500;
+    color: #7a8ba1;
+    text-transform: none;
+    letter-spacing: normal;
+}
+
+.filter-pills-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+}
+
+/* Level selection pills - extra premium */
+.level-selector-section .tag-choice {
+    font-size: 0.82rem;
+    font-weight: 700;
+    padding: 0.35rem 0.85rem;
+    border: 1.5px solid #dbe4f0;
+    transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.level-selector-section .tag-choice:hover {
+    border-color: #4f46e5;
+    background-color: rgba(99, 102, 241, 0.04);
+}
+
+.level-selector-section .tag-choice.active {
+    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+    color: #ffffff;
+    border-color: #4f46e5;
+    box-shadow: 0 4px 10px rgba(99, 102, 241, 0.2);
+}
+
+/* Tech search styling */
+.tech-search-wrapper {
+    position: relative;
+    margin-bottom: 0.65rem;
+}
+
+.tech-search-input {
+    width: 100%;
+    padding: 0.45rem 2.2rem 0.45rem 0.75rem;
+    font-size: 0.84rem;
+    border: 1px solid #dbe4f0;
+    border-radius: 8px;
+    background-color: #f8fbff;
+    transition: all 0.2s ease;
+}
+
+.tech-search-input:focus {
+    background-color: #ffffff;
+    border-color: #6366f1;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
+}
+
+.tech-search-clear {
+    position: absolute;
+    right: 0.65rem;
+    top: 50%;
+    transform: translateY(-50%);
+    border: none;
+    background: none;
+    color: #94a3b8;
+    font-size: 1.15rem;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0;
+    display: none;
+    transition: color 0.15s ease;
+}
+
+.tech-search-clear:hover {
+    color: #475569;
+}
+
+.toggle-all-tech-btn {
+    font-size: 0.76rem;
+    font-weight: 700;
+    color: #4f46e5;
+    background-color: rgba(99, 102, 241, 0.05);
+    border: 1px dashed rgba(99, 102, 241, 0.35);
+    border-radius: 8px;
+    padding: 0.35rem 0.75rem;
+    margin-top: 0.45rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.toggle-all-tech-btn:hover {
+    background-color: rgba(99, 102, 241, 0.1);
+    border-color: #4f46e5;
+}
+
+.tech-subheading {
+    font-size: 0.72rem;
+    font-weight: 800;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-top: 0.65rem;
+    margin-bottom: 0.45rem;
+}
+

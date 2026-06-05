@@ -18,6 +18,30 @@ import { hasCoords } from './map.js';
 
 const TAG_CATEGORY_ORDER = ['specialization', 'level', 'tech', 'employment_type', 'format'];
 
+const levelTechMapping = {
+    'intern': ['html/css', 'git', 'javascript', 'python', 'figma', 'sql'],
+    'junior': ['html/css', 'git', 'javascript', 'python', 'figma', 'sql', 'react', 'vue', 'postgresql', 'django', 'fastapi', 'rest api', 'node.js'],
+    'middle': ['python', 'java', 'javascript', 'typescript', 'sql', 'react', 'vue', 'node.js', 'django', 'fastapi', 'postgresql', 'docker', 'git', 'linux', 'rest api', 'ci/cd'],
+    'senior': ['python', 'java', 'typescript', 'sql', 'react', 'angular', 'node.js', 'postgresql', 'docker', 'kubernetes', 'ci/cd', 'linux', 'pandas', 'bi', 'ml/ai', 'data science'],
+    'lead': ['python', 'java', 'sql', 'docker', 'kubernetes', 'ci/cd', 'linux', 'bi', 'ml/ai', 'data science']
+};
+
+const specTechMapping = {
+    'frontend': ['html/css', 'javascript', 'typescript', 'react', 'vue', 'angular', 'figma', 'git'],
+    'backend': ['python', 'java', 'sql', 'node.js', 'django', 'fastapi', 'postgresql', 'docker', 'git', 'linux', 'rest api'],
+    'fullstack': ['html/css', 'javascript', 'typescript', 'react', 'vue', 'node.js', 'python', 'sql', 'postgresql', 'docker', 'git', 'rest api'],
+    'devops': ['docker', 'kubernetes', 'ci/cd', 'linux', 'git'],
+    'data analyst': ['sql', 'python', 'pandas', 'bi', 'postgresql', 'git'],
+    'data science': ['python', 'sql', 'pandas', 'ml/ai', 'postgresql', 'git'],
+    'ml/ai': ['python', 'ml/ai', 'pandas', 'docker', 'linux', 'git'],
+    'qa': ['python', 'javascript', 'sql', 'rest api', 'git', 'postgresql'],
+    'mobile': ['javascript', 'typescript', 'react', 'rest api', 'git'],
+    'ux/ui designer': ['figma', 'html/css']
+};
+
+let techSearchQuery = '';
+let allTechShown = false;
+
 export function createHomeController({
     state,
     renderMap,
@@ -432,6 +456,8 @@ export function createHomeController({
         el('filterFavorites').value = '';
         if (el('filterSalary')) el('filterSalary').value = '';
         state.opportunityFilters.tagIds = [];
+        techSearchQuery = '';
+        allTechShown = false;
         renderTagChoices('filterTagOptions', []);
         applyOpportunityFilters();
     }
@@ -510,6 +536,244 @@ export function createHomeController({
         }
 
         const selectedIdSet = new Set(selectedIds.map(Number));
+
+        if (containerId === 'filterTagOptions') {
+            const grid = createEl('div', 'filter-tags-grid');
+            
+            const specializations = state.tags.filter(tag => tag.category === 'specialization');
+            const levels = state.tags.filter(tag => tag.category === 'level');
+            const techs = state.tags.filter(tag => tag.category === 'tech');
+            const employments = state.tags.filter(tag => tag.category === 'employment_type');
+
+            // Helper to create tag choice button
+            const createTagButton = (tag) => {
+                const isActive = selectedIdSet.has(tag.id);
+                const button = createEl('button', `tag-choice${isActive ? ' active' : ''}`, tag.name);
+                button.type = 'button';
+                button.dataset.tagId = String(tag.id);
+                button.title = tagCategoryLabel(tag.category);
+                if (toggleable) {
+                    button.addEventListener('click', () => {
+                        button.classList.toggle('active');
+                        state.opportunityFilters.tagIds = selectedTagIdsFromContainer('filterTagOptions');
+                        renderTagChoices('filterTagOptions', state.opportunityFilters.tagIds);
+                        resetOpportunityPage();
+                        void loadOpportunities();
+                    });
+                }
+                return button;
+            };
+
+            // 1. Specialization Section
+            if (specializations.length) {
+                const specSection = createEl('div', 'filter-section');
+                const specTitle = createEl('div', 'filter-section-title');
+                specTitle.innerHTML = '<span>Направление</span><span class="filter-section-subtitle">Выберите сферу</span>';
+                specSection.appendChild(specTitle);
+                
+                const specRow = createEl('div', 'filter-pills-row');
+                specializations.forEach(tag => specRow.appendChild(createTagButton(tag)));
+                specSection.appendChild(specRow);
+                grid.appendChild(specSection);
+            }
+
+            // 2. Level Section
+            if (levels.length) {
+                const levelSection = createEl('div', 'filter-section level-selector-section');
+                const levelTitle = createEl('div', 'filter-section-title');
+                levelTitle.innerHTML = '<span>Грейд / Уровень</span><span class="filter-section-subtitle">Будет предложен соответствующий стек</span>';
+                levelSection.appendChild(levelTitle);
+                
+                const levelRow = createEl('div', 'filter-pills-row');
+                levels.forEach(tag => levelRow.appendChild(createTagButton(tag)));
+                levelSection.appendChild(levelRow);
+                grid.appendChild(levelSection);
+            }
+
+            // 3. Tech Stack Section
+            if (techs.length) {
+                const selectedLevels = levels.filter(tag => selectedIdSet.has(tag.id)).map(tag => tag.name.toLowerCase());
+                const selectedSpecs = specializations.filter(tag => selectedIdSet.has(tag.id)).map(tag => tag.name.toLowerCase());
+                
+                // Define standard lists of technologies for selected options
+                const recommendedTechNames = new Set();
+                selectedLevels.forEach(lvl => {
+                    const list = levelTechMapping[lvl] || [];
+                    list.forEach(t => recommendedTechNames.add(t));
+                });
+                selectedSpecs.forEach(spec => {
+                    const list = specTechMapping[spec] || [];
+                    list.forEach(t => recommendedTechNames.add(t));
+                });
+
+                const hasLevelOrSpecSelected = selectedLevels.length > 0 || selectedSpecs.length > 0;
+                
+                const recommendedTechs = [];
+                const otherTechs = [];
+                
+                techs.forEach(tag => {
+                    const normName = tag.name.toLowerCase();
+                    const isSelected = selectedIdSet.has(tag.id);
+                    
+                    let isRecommended = false;
+                    if (isSelected) {
+                        isRecommended = true;
+                    } else if (hasLevelOrSpecSelected) {
+                        isRecommended = recommendedTechNames.has(normName);
+                    } else {
+                        const popularTechs = ['python', 'javascript', 'typescript', 'sql', 'react', 'docker', 'git', 'html/css', 'postgresql', 'node.js'];
+                        isRecommended = popularTechs.includes(normName);
+                    }
+                    
+                    if (isRecommended) {
+                        recommendedTechs.push(tag);
+                    } else {
+                        otherTechs.push(tag);
+                    }
+                });
+
+                const techSection = createEl('div', 'filter-section');
+                const techTitle = createEl('div', 'filter-section-title');
+                techTitle.innerHTML = '<span>Стек технологий</span><span class="filter-section-subtitle">Выбери технологии</span>';
+                techSection.appendChild(techTitle);
+                
+                // Render search wrapper
+                const searchWrapper = createEl('div', 'tech-search-wrapper');
+                const searchInput = createEl('input', 'tech-search-input');
+                searchInput.type = 'text';
+                searchInput.placeholder = '🔍 Начните вводить технологию...';
+                searchInput.value = techSearchQuery;
+                
+                const clearBtn = createEl('button', 'tech-search-clear', '×');
+                clearBtn.type = 'button';
+                clearBtn.style.display = techSearchQuery ? 'block' : 'none';
+                
+                searchWrapper.appendChild(searchInput);
+                searchWrapper.appendChild(clearBtn);
+                techSection.appendChild(searchWrapper);
+                
+                // Containers for tags
+                const recommendedHeading = createEl('div', 'tech-subheading', hasLevelOrSpecSelected ? 'Рекомендуемые технологии' : 'Популярные технологии');
+                const recommendedRow = createEl('div', 'filter-pills-row tech-tags-container');
+                
+                const otherHeading = createEl('div', 'tech-subheading', 'Другие технологии');
+                const otherRow = createEl('div', 'filter-pills-row tech-tags-container');
+                
+                otherHeading.style.display = allTechShown || techSearchQuery ? 'block' : 'none';
+                otherRow.style.display = allTechShown || techSearchQuery ? 'flex' : 'none';
+                
+                const toggleBtn = createEl('button', 'toggle-all-tech-btn');
+                toggleBtn.type = 'button';
+                toggleBtn.innerHTML = allTechShown ? '✕ Скрыть другие' : '⚙ Показать все технологии';
+                toggleBtn.style.display = (otherTechs.length > 0 && !techSearchQuery) ? 'inline-flex' : 'none';
+
+                const createTechButton = (tag) => {
+                    const isActive = selectedIdSet.has(tag.id);
+                    const button = createEl('button', `tag-choice${isActive ? ' active' : ''}`, tag.name);
+                    button.type = 'button';
+                    button.dataset.tagId = String(tag.id);
+                    button.dataset.tagName = tag.name.toLowerCase();
+                    button.title = tagCategoryLabel(tag.category);
+                    if (toggleable) {
+                        button.addEventListener('click', () => {
+                            button.classList.toggle('active');
+                            state.opportunityFilters.tagIds = selectedTagIdsFromContainer('filterTagOptions');
+                            renderTagChoices('filterTagOptions', state.opportunityFilters.tagIds);
+                            resetOpportunityPage();
+                            void loadOpportunities();
+                        });
+                    }
+                    return button;
+                };
+                
+                recommendedTechs.forEach(tag => recommendedRow.appendChild(createTechButton(tag)));
+                otherTechs.forEach(tag => otherRow.appendChild(createTechButton(tag)));
+
+                techSection.appendChild(recommendedHeading);
+                techSection.appendChild(recommendedRow);
+                
+                if (otherTechs.length > 0) {
+                    techSection.appendChild(otherHeading);
+                    techSection.appendChild(otherRow);
+                    techSection.appendChild(toggleBtn);
+                }
+
+                // Add search & clear listeners
+                searchInput.addEventListener('input', (e) => {
+                    const query = e.target.value.trim().toLowerCase();
+                    techSearchQuery = query;
+                    clearBtn.style.display = query ? 'block' : 'none';
+                    
+                    const allTechButtons = techSection.querySelectorAll('.tech-tags-container .tag-choice');
+                    let hasVisibleOthers = false;
+                    
+                    allTechButtons.forEach(btn => {
+                        const name = btn.dataset.tagName || '';
+                        const matches = name.includes(query);
+                        btn.style.display = matches ? 'inline-block' : 'none';
+                        
+                        if (otherRow.contains(btn) && matches) {
+                            hasVisibleOthers = true;
+                        }
+                    });
+                    
+                    if (query) {
+                        otherHeading.style.display = hasVisibleOthers ? 'block' : 'none';
+                        otherRow.style.display = hasVisibleOthers ? 'flex' : 'none';
+                        toggleBtn.style.display = 'none';
+                        recommendedHeading.style.display = 'none';
+                    } else {
+                        recommendedHeading.style.display = 'block';
+                        otherHeading.style.display = allTechShown ? 'block' : 'none';
+                        otherRow.style.display = allTechShown ? 'flex' : 'none';
+                        toggleBtn.style.display = 'inline-flex';
+                    }
+                });
+                
+                clearBtn.addEventListener('click', () => {
+                    searchInput.value = '';
+                    techSearchQuery = '';
+                    clearBtn.style.display = 'none';
+                    
+                    const allTechButtons = techSection.querySelectorAll('.tech-tags-container .tag-choice');
+                    allTechButtons.forEach(btn => {
+                        btn.style.display = 'inline-block';
+                    });
+                    
+                    recommendedHeading.style.display = 'block';
+                    otherHeading.style.display = allTechShown ? 'block' : 'none';
+                    otherRow.style.display = allTechShown ? 'flex' : 'none';
+                    toggleBtn.style.display = otherTechs.length > 0 ? 'inline-flex' : 'none';
+                    searchInput.focus();
+                });
+                
+                toggleBtn.addEventListener('click', () => {
+                    allTechShown = !allTechShown;
+                    toggleBtn.innerHTML = allTechShown ? '✕ Скрыть другие' : '⚙ Показать все технологии';
+                    otherHeading.style.display = allTechShown ? 'block' : 'none';
+                    otherRow.style.display = allTechShown ? 'flex' : 'none';
+                });
+
+                grid.appendChild(techSection);
+            }
+
+            // 4. Employment Section
+            if (employments.length) {
+                const empSection = createEl('div', 'filter-section');
+                const empTitle = createEl('div', 'filter-section-title');
+                empTitle.innerHTML = '<span>Занятость</span><span class="filter-section-subtitle">Тип занятости</span>';
+                empSection.appendChild(empTitle);
+                
+                const empRow = createEl('div', 'filter-pills-row');
+                employments.forEach(tag => empRow.appendChild(createTagButton(tag)));
+                empSection.appendChild(empRow);
+                grid.appendChild(empSection);
+            }
+
+            container.appendChild(grid);
+            return;
+        }
+
         const categories = [...new Set(state.tags.map((tag) => tag.category))].sort((left, right) => {
             const leftIndex = TAG_CATEGORY_ORDER.indexOf(left);
             const rightIndex = TAG_CATEGORY_ORDER.indexOf(right);
