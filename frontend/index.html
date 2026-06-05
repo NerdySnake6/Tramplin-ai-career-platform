@@ -284,38 +284,11 @@
                                     <input type="text" class="form-control form-control-sm" id="filterSearch" placeholder="Поиск по тексту">
                                 </div>
                             </div>
-                            <details class="advanced-filters mt-3">
-                                <summary>Расширенные фильтры</summary>
-                                <div class="row g-2 mt-1">
-                                    <div class="col-md-6">
-                                        <label class="visually-hidden" for="filterFavorites">Фильтр избранного</label>
-                                        <select class="form-select form-select-sm" id="filterFavorites">
-                                            <option value="">Все возможности</option>
-                                            <option value="vacancies">Избранные вакансии</option>
-                                            <option value="companies">Вакансии избранных компаний</option>
-                                            <option value="all">Любое избранное</option>
-                                        </select>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="visually-hidden" for="filterSalary">Фильтр вознаграждения</label>
-                                        <select class="form-select form-select-sm" id="filterSalary">
-                                            <option value="">Любое вознаграждение</option>
-                                            <option value="paid">Только оплачиваемые</option>
-                                            <option value="50000">От 50 000 ₽</option>
-                                            <option value="100000">От 100 000 ₽</option>
-                                        </select>
-                                    </div>
-                                    <div class="col-12">
-                                        <div class="small text-muted mb-1">Фильтр по тегам</div>
-                                        <div id="filterTagOptions" class="tag-selector">
-                                            <span class="text-muted small">Теги загружаются...</span>
-                                        </div>
-                                    </div>
-                                    <div class="col-12 d-flex justify-content-end">
-                                        <button class="btn btn-sm btn-outline-secondary" id="filterResetBtn" type="button">Сбросить</button>
-                                    </div>
-                                </div>
-                            </details>
+                            <div class="advanced-filters mt-3">
+                                <button class="btn btn-sm btn-outline-primary w-100" id="openAdvancedFiltersBtn" type="button">
+                                    Расширенные фильтры
+                                </button>
+                            </div>
                             </div>
                         </div>
                     </div>
@@ -439,6 +412,7 @@
                                     <label class="visually-hidden" for="tagCategoryInput">Категория нового тега</label>
                                     <select class="form-select form-select-sm" id="tagCategoryInput" required>
                                         <option value="" disabled selected hidden>Выберите категорию...</option>
+                                        <option value="specialization">Направление</option>
                                         <option value="tech">Технология</option>
                                         <option value="level">Уровень</option>
                                         <option value="employment_type">Занятость</option>
@@ -645,6 +619,7 @@
                                     <label class="visually-hidden" for="curatorTagCategoryInput">Категория нового тега куратора</label>
                                     <select class="form-select form-select-sm" id="curatorTagCategoryInput" required>
                                         <option value="" disabled selected hidden>Выберите категорию...</option>
+                                        <option value="specialization">Направление</option>
                                         <option value="tech">Технология</option>
                                         <option value="level">Уровень</option>
                                         <option value="employment_type">Занятость</option>
@@ -1188,6 +1163,53 @@
                         <button type="submit" class="btn btn-primary">Сохранить карточку</button>
                     </div>
                 </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="advancedFiltersModal" tabindex="-1" aria-labelledby="advancedFiltersModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable modal-fullscreen-md-down">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div>
+                        <h2 class="modal-title modal-heading" id="advancedFiltersModalLabel">Расширенные фильтры</h2>
+                        <p class="text-muted small mb-0">Сузь выдачу по оплате, избранному, направлению, уровню и стеку.</p>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label" for="filterFavorites">Избранное</label>
+                            <select class="form-select" id="filterFavorites">
+                                <option value="">Все возможности</option>
+                                <option value="vacancies">Избранные вакансии</option>
+                                <option value="companies">Вакансии избранных компаний</option>
+                                <option value="all">Любое избранное</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="filterSalary">Вознаграждение</label>
+                            <select class="form-select" id="filterSalary">
+                                <option value="">Любое вознаграждение</option>
+                                <option value="paid">Только оплачиваемые</option>
+                                <option value="50000">От 50 000 ₽</option>
+                                <option value="100000">От 100 000 ₽</option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <div class="fw-semibold">IT-теги</div>
+                            <div class="small text-muted mb-2">Открой нужную группу и выбери несколько тегов.</div>
+                            <div id="filterTagOptions" class="tag-selector tag-selector-grouped">
+                                <span class="text-muted small">Теги загружаются...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-outline-secondary" id="filterResetBtn" type="button">Сбросить</button>
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Показать результаты</button>
+                </div>
             </div>
         </div>
     </div>

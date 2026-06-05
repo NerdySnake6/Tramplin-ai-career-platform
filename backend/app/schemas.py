@@ -136,7 +136,7 @@ class PasswordChange(BaseModel):
 
 class TagBase(BaseModel):
     name: str = Field(min_length=1, max_length=50)
-    category: Literal["tech", "level", "employment_type", "format"]
+    category: Literal["specialization", "tech", "level", "employment_type", "format"]
 
 
 class TagCreate(TagBase):

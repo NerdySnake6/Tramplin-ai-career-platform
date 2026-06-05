@@ -1652,43 +1652,84 @@ body {
     border-top: 1px solid #e8eef7;
 }
 
-.advanced-filters summary {
-    cursor: pointer;
-    list-style: none;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.45rem;
-    color: #355070;
-    font-size: 0.88rem;
-    font-weight: 600;
-}
-
-.advanced-filters summary::-webkit-details-marker {
-    display: none;
-}
-
-.advanced-filters summary::before {
-    content: '+';
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 1.1rem;
-    height: 1.1rem;
-    border-radius: 999px;
-    background: #e8f0ff;
-    color: #0d6efd;
+.advanced-filters .btn {
+    border-style: dashed;
+    border-color: #b8c7ff;
+    color: #3355d6;
     font-weight: 700;
-    line-height: 1;
-}
-
-.advanced-filters[open] summary::before {
-    content: '-';
 }
 
 .tag-selector {
     display: flex;
     flex-wrap: wrap;
     gap: 0.45rem;
+}
+
+.tag-selector-grouped {
+    display: grid;
+    gap: 0.7rem;
+}
+
+.tag-category-group {
+    border: 1px solid #dbe4f0;
+    border-radius: 1rem;
+    background: linear-gradient(135deg, #ffffff 0%, #f7faff 100%);
+    overflow: hidden;
+}
+
+.tag-category-summary {
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    justify-content: space-between;
+    list-style: none;
+    padding: 0.75rem 0.85rem;
+}
+
+.tag-category-summary::-webkit-details-marker {
+    display: none;
+}
+
+.tag-category-summary::before {
+    content: '+';
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.35rem;
+    height: 1.35rem;
+    border-radius: 999px;
+    background: #e8f0ff;
+    color: #0d6efd;
+    font-weight: 800;
+    line-height: 1;
+}
+
+.tag-category-group[open] .tag-category-summary::before {
+    content: '-';
+}
+
+.tag-category-title {
+    flex: 1;
+    color: #243447;
+    font-size: 0.9rem;
+    font-weight: 800;
+}
+
+.tag-category-count {
+    border-radius: 999px;
+    background: #edf3ff;
+    color: #4c5f7a;
+    font-size: 0.78rem;
+    font-weight: 800;
+    padding: 0.15rem 0.5rem;
+}
+
+.tag-category-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+    padding: 0 0.85rem 0.85rem;
 }
 
 .tag-choice {

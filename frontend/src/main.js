@@ -82,6 +82,7 @@ let opportunityDetailsModal;
 let applyModal;
 let recommendModal;
 let applicantProfileModal;
+let advancedFiltersModal;
 let curatorUserModal;
 let curatorCreateModal;
 let curatorOpportunityModal;
@@ -1671,6 +1672,7 @@ function initModals() {
     applyModal = new window.bootstrap.Modal(el('applyModal'));
     recommendModal = new window.bootstrap.Modal(el('recommendModal'));
     applicantProfileModal = new window.bootstrap.Modal(el('applicantProfileModal'));
+    advancedFiltersModal = new window.bootstrap.Modal(el('advancedFiltersModal'));
     curatorUserModal = new window.bootstrap.Modal(el('curatorUserModal'));
     curatorCreateModal = new window.bootstrap.Modal(el('curatorCreateModal'));
     curatorOpportunityModal = new window.bootstrap.Modal(el('curatorOpportunityModal'));
@@ -1768,6 +1770,9 @@ function bindEvents() {
     });
     el('loadMapBtn').addEventListener('click', () => {
         void ensureMapReady();
+    });
+    el('openAdvancedFiltersBtn').addEventListener('click', () => {
+        advancedFiltersModal.show();
     });
 
     el('logoutBtn').addEventListener('click', handleLogout);

@@ -16,6 +16,8 @@ import {
 } from './utils.js';
 import { hasCoords } from './map.js';
 
+const TAG_CATEGORY_ORDER = ['specialization', 'level', 'tech', 'employment_type', 'format'];
+
 export function createHomeController({
     state,
     renderMap,
@@ -507,22 +509,51 @@ export function createHomeController({
             return;
         }
 
-        state.tags.forEach((tag) => {
-            const button = createEl('button', `tag-choice${selectedIds.includes(tag.id) ? ' active' : ''}`, tag.name);
-            button.type = 'button';
-            button.dataset.tagId = String(tag.id);
-            button.title = tagCategoryLabel(tag.category);
-            if (toggleable) {
-                button.addEventListener('click', () => {
-                    button.classList.toggle('active');
-                    if (containerId === 'filterTagOptions') {
-                        state.opportunityFilters.tagIds = selectedTagIdsFromContainer('filterTagOptions');
-                        resetOpportunityPage();
-                        void loadOpportunities();
-                    }
-                });
+        const selectedIdSet = new Set(selectedIds.map(Number));
+        const categories = [...new Set(state.tags.map((tag) => tag.category))].sort((left, right) => {
+            const leftIndex = TAG_CATEGORY_ORDER.indexOf(left);
+            const rightIndex = TAG_CATEGORY_ORDER.indexOf(right);
+            const normalizedLeftIndex = leftIndex === -1 ? TAG_CATEGORY_ORDER.length : leftIndex;
+            const normalizedRightIndex = rightIndex === -1 ? TAG_CATEGORY_ORDER.length : rightIndex;
+            if (normalizedLeftIndex !== normalizedRightIndex) {
+                return normalizedLeftIndex - normalizedRightIndex;
             }
-            container.appendChild(button);
+            return tagCategoryLabel(left).localeCompare(tagCategoryLabel(right), 'ru');
+        });
+
+        categories.forEach((category) => {
+            const categoryTags = state.tags.filter((tag) => tag.category === category);
+            const selectedCount = categoryTags.filter((tag) => selectedIdSet.has(tag.id)).length;
+            const group = createEl('details', 'tag-category-group');
+            group.open = category === 'specialization' || category === 'level' || selectedCount > 0;
+
+            const summary = createEl('summary', 'tag-category-summary');
+            summary.appendChild(createEl('span', 'tag-category-title', tagCategoryLabel(category)));
+            summary.appendChild(createEl('span', 'tag-category-count', selectedCount ? `${selectedCount}/${categoryTags.length}` : String(categoryTags.length)));
+            group.appendChild(summary);
+
+            const options = createEl('div', 'tag-category-options');
+            categoryTags.forEach((tag) => {
+                const button = createEl('button', `tag-choice${selectedIdSet.has(tag.id) ? ' active' : ''}`, tag.name);
+                button.type = 'button';
+                button.dataset.tagId = String(tag.id);
+                button.title = tagCategoryLabel(tag.category);
+                if (toggleable) {
+                    button.addEventListener('click', () => {
+                        button.classList.toggle('active');
+                        if (containerId === 'filterTagOptions') {
+                            state.opportunityFilters.tagIds = selectedTagIdsFromContainer('filterTagOptions');
+                            renderTagChoices('filterTagOptions', state.opportunityFilters.tagIds);
+                            resetOpportunityPage();
+                            void loadOpportunities();
+                        }
+                    });
+                }
+                options.appendChild(button);
+            });
+
+            group.appendChild(options);
+            container.appendChild(group);
         });
     }
 

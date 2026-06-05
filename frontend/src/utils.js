@@ -76,6 +76,7 @@ export function debounce(callback, delay = 300) {
 }
 
 export function tagCategoryLabel(category) {
+    if (category === 'specialization') return 'Направление';
     if (category === 'tech') return 'Технология';
     if (category === 'level') return 'Уровень';
     if (category === 'employment_type') return 'Занятость';
