@@ -8,6 +8,7 @@ from app.email_service import EmailDeliveryError
 from app.opportunity_visibility import is_expiration_datetime_allowed, normalize_expiration_datetime
 from app.routers import opportunities as opportunities_router
 from app.routers import auth as auth_router
+from app.routers import responses as responses_router
 from app.routers.opportunities import EMPLOYER_FREE_OPPORTUNITY_LIMIT
 from app.tag_validation import MAX_TAGS_PER_CATEGORY
 
@@ -119,6 +120,53 @@ def confirm_registered_email(client, email):
 def auth_headers(token):
     """Формирует HTTP-заголовки с bearer token."""
     return {"Authorization": f"Bearer {token}"}
+
+
+def create_response_status_fixture(db_session, *, response_status="pending"):
+    """Создает данные для проверки смены статуса отклика."""
+    employer = models.User(
+        email="status-employer@example.com",
+        hashed_password=get_password_hash("supersecret"),
+        display_name="Status Employer",
+        role="employer",
+        is_verified=True,
+    )
+    applicant = models.User(
+        email="status-applicant@example.com",
+        hashed_password=get_password_hash("supersecret"),
+        display_name="Status Applicant",
+        role="applicant",
+    )
+    db_session.add_all([employer, applicant])
+    db_session.flush()
+
+    opportunity = models.Opportunity(
+        employer_id=employer.id,
+        title="Backend Internship",
+        description=(
+            "Стажировка с наставником и понятными задачами."
+        ),
+        type="internship",
+        work_format="remote",
+        location="Удаленно",
+        salary_range="до 80 000",
+        is_active=True,
+    )
+    db_session.add(opportunity)
+    db_session.flush()
+
+    response = models.Response(
+        applicant_id=applicant.id,
+        opportunity_id=opportunity.id,
+        cover_letter="Хочу пройти стажировку.",
+        status=response_status,
+    )
+    db_session.add(response)
+    db_session.commit()
+    db_session.refresh(response)
+
+    token = create_access_token({"sub": employer.email, "role": employer.role})
+    return response.id, auth_headers(token), applicant.email
 
 
 def test_public_registration_rejects_privileged_roles(client):
@@ -635,8 +683,19 @@ def test_auth_and_profile_flow(client):
     assert profile["applicant_profile"]["is_profile_public"] is True
 
 
-def test_employer_opportunity_and_response_flow(client, db_session):
+def test_employer_opportunity_and_response_flow(client, db_session, monkeypatch):
     """Проверяет создание возможности, отклик и смену статуса работодателем."""
+    sent_emails = []
+
+    def fake_send_response_status_email(**kwargs):
+        sent_emails.append(kwargs)
+
+    monkeypatch.setattr(
+        responses_router.email_service,
+        "send_response_status_email",
+        fake_send_response_status_email,
+    )
+
     employer_register = register_user(
         client,
         email="employer@example.com",
@@ -721,6 +780,105 @@ def test_employer_opportunity_and_response_flow(client, db_session):
     )
     assert update_status.status_code == 200
     assert update_status.json()["status"] == "accepted"
+    assert sent_emails == [
+        {
+            "to_email": "applicant@example.com",
+            "display_name": "Applicant",
+            "opportunity_title": "Junior Backend Intern",
+            "status_value": "accepted",
+        }
+    ]
+
+
+def test_response_status_email_sent_only_for_accepted_and_rejected(
+    client,
+    db_session,
+    monkeypatch,
+):
+    """Проверяет, что письма уходят только для принятого и отклоненного отклика."""
+    response_id, headers, applicant_email = create_response_status_fixture(db_session)
+    sent_emails = []
+
+    def fake_send_response_status_email(**kwargs):
+        sent_emails.append(kwargs)
+
+    monkeypatch.setattr(
+        responses_router.email_service,
+        "send_response_status_email",
+        fake_send_response_status_email,
+    )
+
+    accepted_response = client.patch(
+        f"/responses/{response_id}/status",
+        headers=headers,
+        json={"status": "accepted"},
+    )
+    assert accepted_response.status_code == 200
+    assert accepted_response.json()["status"] == "accepted"
+    assert len(sent_emails) == 1
+    assert sent_emails[0]["to_email"] == applicant_email
+    assert sent_emails[0]["status_value"] == "accepted"
+
+    repeated_response = client.patch(
+        f"/responses/{response_id}/status",
+        headers=headers,
+        json={"status": "accepted"},
+    )
+    assert repeated_response.status_code == 200
+    assert len(sent_emails) == 1
+
+    reserve_response = client.patch(
+        f"/responses/{response_id}/status",
+        headers=headers,
+        json={"status": "reserve"},
+    )
+    assert reserve_response.status_code == 200
+    assert reserve_response.json()["status"] == "reserve"
+    assert len(sent_emails) == 1
+
+    rejected_response = client.patch(
+        f"/responses/{response_id}/status",
+        headers=headers,
+        json={"status": "rejected"},
+    )
+    assert rejected_response.status_code == 200
+    assert rejected_response.json()["status"] == "rejected"
+    assert len(sent_emails) == 2
+    assert sent_emails[1]["to_email"] == applicant_email
+    assert sent_emails[1]["status_value"] == "rejected"
+
+
+def test_response_status_update_survives_email_delivery_error(
+    client,
+    db_session,
+    monkeypatch,
+):
+    """Проверяет, что ошибка SMTP не отменяет сохранение статуса отклика."""
+    response_id, headers, _ = create_response_status_fixture(db_session)
+
+    def fail_send_response_status_email(**_):
+        raise EmailDeliveryError("smtp down")
+
+    monkeypatch.setattr(
+        responses_router.email_service,
+        "send_response_status_email",
+        fail_send_response_status_email,
+    )
+
+    update_status = client.patch(
+        f"/responses/{response_id}/status",
+        headers=headers,
+        json={"status": "accepted"},
+    )
+    assert update_status.status_code == 200
+    assert update_status.json()["status"] == "accepted"
+
+    saved_response = (
+        db_session.query(models.Response)
+        .filter(models.Response.id == response_id)
+        .first()
+    )
+    assert saved_response.status == "accepted"
 
 
 def test_employer_cannot_create_opportunity_with_unreasonable_salary(client, db_session):

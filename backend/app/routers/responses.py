@@ -1,16 +1,19 @@
 """Маршруты для откликов соискателей и работы работодателя с ними."""
 
+import logging
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app import models, schemas
+from app import email_service, models, schemas
 from app.database import get_db
 from app.dependencies import get_current_active_user, require_roles
 from app.opportunity_visibility import public_opportunity_filters
 
 router = APIRouter(prefix="/responses", tags=["responses"])
+logger = logging.getLogger(__name__)
+EMAIL_STATUSES = {"accepted", "rejected"}
 
 
 @router.post("/", response_model=schemas.ResponseOut, status_code=status.HTTP_201_CREATED)
@@ -124,7 +127,21 @@ def update_response_status(
     if current_user.role == "employer" and opportunity.employer_id != current_user.id:
         raise HTTPException(status_code=403, detail="Not enough permissions")
 
+    previous_status = response.status
     response.status = status_data.status
     db.commit()
     db.refresh(response)
+    if previous_status != response.status and response.status in EMAIL_STATUSES:
+        try:
+            email_service.send_response_status_email(
+                to_email=response.applicant.email,
+                display_name=response.applicant.display_name,
+                opportunity_title=opportunity.title,
+                status_value=response.status,
+            )
+        except email_service.EmailDeliveryError:
+            logger.exception(
+                "Failed to send response status notification",
+                extra={"response_id": response.id, "status": response.status},
+            )
     return response
