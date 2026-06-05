@@ -72,6 +72,7 @@ let mapAutoloadBound = false;
 let mapAutoloadObserver = null;
 let mapResizeObserver = null;
 let mapHeightObserver = null;
+let mapHeightFrameId = null;
 let userHasInteracted = false;
 let pendingVerificationEmail = '';
 
@@ -171,7 +172,22 @@ function syncMapStageHeight() {
     }
 
     const targetHeight = Math.max(Math.ceil(homeExplorerCard.getBoundingClientRect().height), 760);
-    mapStage.style.height = `${targetHeight}px`;
+    const nextHeight = `${targetHeight}px`;
+    if (mapStage.style.height !== nextHeight) {
+        mapStage.style.height = nextHeight;
+    }
+}
+
+function scheduleMapStageHeightSync() {
+    if (mapHeightFrameId !== null) return;
+
+    mapHeightFrameId = window.requestAnimationFrame(() => {
+        mapHeightFrameId = null;
+        syncMapStageHeight();
+        if (mapUiState === MAP_UI_STATE.ready) {
+            resizeMap();
+        }
+    });
 }
 
 function setupMapHeightSync() {
@@ -180,20 +196,10 @@ function setupMapHeightSync() {
     const homeExplorerCard = el('homeExplorerCard');
     if (!homeExplorerCard) return;
 
-    mapHeightObserver = new ResizeObserver(() => {
-        syncMapStageHeight();
-        if (mapUiState === MAP_UI_STATE.ready) {
-            resizeMap();
-        }
-    });
+    mapHeightObserver = new ResizeObserver(scheduleMapStageHeightSync);
 
     mapHeightObserver.observe(homeExplorerCard);
-    window.addEventListener('resize', () => {
-        syncMapStageHeight();
-        if (mapUiState === MAP_UI_STATE.ready) {
-            resizeMap();
-        }
-    }, { passive: true });
+    window.addEventListener('resize', scheduleMapStageHeightSync, { passive: true });
     syncMapStageHeight();
 }
 

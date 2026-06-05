@@ -70,14 +70,14 @@ body {
 
 .employer-home-opportunity-card,
 .list-group-item.opportunity-item {
-    transition: transform 0.2s ease, box-shadow 0.2s ease !important;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05) !important;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04) !important;
+    contain: layout paint;
+    transition: border-color 0.18s ease, background-color 0.18s ease !important;
 }
 
 .employer-home-opportunity-card:hover,
 .list-group-item.opportunity-item:hover {
-    transform: translateY(-2px) !important;
-    box-shadow: 0 10px 15px -3px rgba(99, 102, 241, 0.1), 0 4px 6px -4px rgba(99, 102, 241, 0.1) !important;
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.08) !important;
 }
 
 /* Skeleton Loaders */
@@ -356,7 +356,7 @@ body {
     border-radius: 4px;
     font-size: 12px;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 .app-toast-action:hover,
@@ -506,7 +506,7 @@ body {
     border: 1px solid var(--notice-accent);
     background: transparent;
     border-radius: 4px;
-    transition: all 0.2s;
+    transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 .app-modal-notice-action:hover,
@@ -691,7 +691,7 @@ body {
     border: 1px solid #e4ecf7;
     border-radius: 14px;
     padding: 1.25rem;
-    box-shadow: 0 14px 34px rgba(31, 42, 55, 0.05);
+    box-shadow: 0 8px 22px rgba(31, 42, 55, 0.035);
     overflow-wrap: anywhere;
     word-break: break-word;
     min-height: 100%;
@@ -926,8 +926,9 @@ body {
     border-radius: 18px;
     border: 1px solid #dfe8f5;
     overflow: hidden;
-    box-shadow: 0 16px 36px rgba(31, 42, 55, 0.1);
+    box-shadow: 0 8px 22px rgba(31, 42, 55, 0.06);
     background: #fff;
+    contain: layout paint;
 }
 
 #map {
@@ -1148,7 +1149,7 @@ body {
 .contact-item,
 .moderation-item,
 .opportunity-manage-item {
-    transition: background-color 0.18s ease, transform 0.18s ease;
+    transition: background-color 0.18s ease, border-color 0.18s ease;
 }
 
 .opportunity-item:hover,
@@ -1156,7 +1157,7 @@ body {
 .contact-item:hover,
 .moderation-item:hover,
 .opportunity-manage-item:hover {
-    transform: translateY(-1px);
+    border-color: #cbd5e1 !important;
 }
 
 .opportunity-item.favorite-opportunity {
@@ -1445,6 +1446,7 @@ body {
 
 .home-explorer-card {
     background: linear-gradient(180deg, #ffffff, #fbfcff);
+    contain: layout paint;
     width: 100%;
 }
 
@@ -1597,7 +1599,7 @@ body {
 .employer-home-opportunity-card {
     border: 1px solid #e4ecf7;
     cursor: pointer;
-    transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+    transition: background-color 0.18s ease, border-color 0.18s ease;
     min-width: 0;
     overflow: hidden;
     overflow-wrap: anywhere;
@@ -1605,8 +1607,8 @@ body {
 }
 
 .employer-home-opportunity-card:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 16px 32px rgba(31, 42, 55, 0.08) !important;
+    border-color: #cbdaf0;
+    box-shadow: 0 4px 12px rgba(31, 42, 55, 0.05) !important;
 }
 
 .employer-home-opportunity-card.active {
@@ -1617,6 +1619,7 @@ body {
 .home-list-card,
 .home-favorites-card {
     background: linear-gradient(180deg, #ffffff, #fbfcff);
+    contain: layout paint;
     height: 100%;
 }
 
@@ -1763,7 +1766,7 @@ body {
 
 .card.shadow-sm {
     border-radius: 14px;
-    box-shadow: 0 14px 34px rgba(31, 42, 55, 0.06) !important;
+    box-shadow: 0 8px 22px rgba(31, 42, 55, 0.04) !important;
 }
 
 .card-title {
@@ -2194,7 +2197,7 @@ body {
     font-size: 0.875rem;
     font-weight: 550;
     color: #475569;
-    transition: all 0.2s ease;
+    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
 }
 
 .detail-fact-item:hover {
@@ -2215,7 +2218,7 @@ body {
     padding: 0.35rem 0.75rem;
     font-size: 0.85rem;
     font-weight: 600;
-    transition: all 0.2s ease;
+    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
     display: inline-block;
 }
 
@@ -2233,7 +2236,7 @@ body {
     padding: 0.25rem 0.6rem;
     font-size: 0.78rem;
     font-weight: 600;
-    transition: all 0.2s ease;
+    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
     display: inline-block;
 }
 
@@ -2294,7 +2297,7 @@ body {
     font-size: 0.78rem;
     font-weight: 550;
     color: #64748b;
-    transition: all 0.2s ease;
+    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
 }
 
 .card-fact-item:hover {

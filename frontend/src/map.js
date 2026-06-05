@@ -22,6 +22,7 @@ export function createMapController({
     let mapLinkObserver;
     let placemarks = [];
     let resizeFrameId = null;
+    let mapLinkLabelFrameId = null;
 
     function hasUnsafeHref(link) {
         const href = link.getAttribute('href')?.trim();
@@ -97,14 +98,20 @@ export function createMapController({
         });
     }
 
+    function requestYandexMapLabeling() {
+        if (mapLinkLabelFrameId !== null) return;
+
+        mapLinkLabelFrameId = window.requestAnimationFrame(() => {
+            mapLinkLabelFrameId = null;
+            labelYandexMapLinks();
+        });
+    }
+
     function observeYandexMapLinks() {
         const mapContainer = document.getElementById('map');
         if (!mapContainer || mapLinkObserver) return;
 
-        mapLinkObserver = new MutationObserver(() => {
-            labelYandexMapLinks();
-            window.requestAnimationFrame(labelYandexMapLinks);
-        });
+        mapLinkObserver = new MutationObserver(requestYandexMapLabeling);
         mapLinkObserver.observe(mapContainer, {
             attributes: true,
             attributeFilter: ['aria-label', 'href', 'rel', 'target', 'title'],
@@ -116,7 +123,7 @@ export function createMapController({
 
     function scheduleYandexMapLabeling() {
         [0, 250, 1000].forEach((delay) => {
-            window.setTimeout(labelYandexMapLinks, delay);
+            window.setTimeout(requestYandexMapLabeling, delay);
         });
     }
 
