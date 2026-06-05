@@ -118,8 +118,9 @@ export function createHomeController({
             const top = createEl('div', 'd-flex flex-column gap-2 mb-2');
             const titleWrap = createEl('div', 'opportunity-title-wrap');
             const title = createEl('h3', 'card-title h5 mb-1');
-            const titleLink = createEl('a', 'opportunity-title-link', opportunity.title);
+            const titleLink = createEl('a', 'opportunity-title-link', opportunity.title || 'Без названия');
             titleLink.href = `/opportunities/${opportunity.id}`;
+            titleLink.setAttribute('aria-label', `${opportunity.title || 'Без названия'} — ${opportunity.employer_name || 'Работодатель'}`);
             titleLink.addEventListener('click', (event) => {
                 event.preventDefault();
                 event.stopPropagation();
@@ -297,8 +298,9 @@ export function createHomeController({
             const header = createEl('div', 'd-flex flex-column gap-2 mb-2');
             const titleWrap = createEl('div', 'opportunity-title-wrap');
             const title = createEl('h3', 'h6 mb-1');
-            const titleLink = createEl('a', 'opportunity-title-link', opportunity.title);
+            const titleLink = createEl('a', 'opportunity-title-link', opportunity.title || 'Без названия');
             titleLink.href = `/opportunities/${opportunity.id}`;
+            titleLink.setAttribute('aria-label', `${opportunity.title || 'Без названия'} — ${opportunity.employer_name || 'Работодатель'}`);
             titleLink.addEventListener('click', (event) => {
                 event.preventDefault();
                 event.stopPropagation();

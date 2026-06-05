@@ -105,11 +105,11 @@ const PUBLIC_ROUTES = {
 };
 
 const ROUTE_LINKS = [
-    ['Все возможности', '/opportunities'],
-    ['Стажировки', '/internships'],
-    ['Вакансии', '/jobs'],
-    ['Мероприятия', '/events'],
-    ['О проекте', '/about'],
+    ['Все возможности', '/opportunities', 'Каталог всех возможностей'],
+    ['Стажировки', '/internships', 'Стажировки для студентов'],
+    ['Вакансии', '/jobs', 'Вакансии для начинающих'],
+    ['Мероприятия', '/events', 'Карьерные мероприятия'],
+    ['О проекте', '/about', 'Подробнее о платформе Трамплин'],
 ];
 
 function cleanText(value) {
@@ -388,9 +388,10 @@ function appendParagraphs(container, paragraphs) {
     });
 }
 
-function createRouteLink(label, path, onNavigate) {
+function createRouteLink(label, path, ariaLabel, onNavigate) {
     const link = createEl('a', 'public-route-link', label);
     link.href = path;
+    if (ariaLabel) link.setAttribute('aria-label', ariaLabel);
     link.addEventListener('click', (event) => {
         event.preventDefault();
         onNavigate(path);
@@ -400,8 +401,8 @@ function createRouteLink(label, path, onNavigate) {
 
 function appendRouteLinks(container, onNavigate) {
     const links = createEl('div', 'public-route-links');
-    ROUTE_LINKS.forEach(([label, path]) => {
-        links.appendChild(createRouteLink(label, path, onNavigate));
+    ROUTE_LINKS.forEach(([label, path, ariaLabel]) => {
+        links.appendChild(createRouteLink(label, path, ariaLabel, onNavigate));
     });
     container.appendChild(links);
 }
@@ -425,7 +426,7 @@ function renderAboutSection(panel, onNavigate) {
 function renderOpportunitySection(panel, route, opportunity, onNavigate) {
     if (!opportunity) {
         panel.appendChild(createEl('p', 'mb-3', 'Эта возможность не найдена в публичном каталоге или больше не опубликована.'));
-        panel.appendChild(createRouteLink('Вернуться к каталогу', '/opportunities', onNavigate));
+        panel.appendChild(createRouteLink('Вернуться к каталогу', '/opportunities', 'Каталог всех возможностей', onNavigate));
         return;
     }
 
@@ -454,7 +455,7 @@ function renderOpportunitySection(panel, route, opportunity, onNavigate) {
     }
 
     const links = createEl('div', 'public-route-links');
-    links.appendChild(createRouteLink('Все возможности', '/opportunities', onNavigate));
+    links.appendChild(createRouteLink('Все возможности', '/opportunities', 'Каталог всех возможностей', onNavigate));
     if (['job', 'event', 'internship'].includes(opportunity.type)) {
         let typePath = '/internships';
         if (opportunity.type === 'job') {
@@ -463,7 +464,7 @@ function renderOpportunitySection(panel, route, opportunity, onNavigate) {
         if (opportunity.type === 'event') {
             typePath = '/events';
         }
-        links.appendChild(createRouteLink(opportunityTypeLabel(opportunity.type), typePath, onNavigate));
+        links.appendChild(createRouteLink(opportunityTypeLabel(opportunity.type), typePath, null, onNavigate));
     }
     panel.appendChild(links);
     panel.dataset.opportunityId = String(route.opportunityId);
