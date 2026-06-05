@@ -8,8 +8,8 @@ from sqlalchemy.orm import Session
 
 from app import models
 
-MAX_TAG_CATALOG_SIZE = 100
-MAX_TAGS_PER_CATEGORY = 40
+MAX_TAG_CATALOG_SIZE = 200
+MAX_TAGS_PER_CATEGORY = 100
 MAX_TAG_NAME_LENGTH = 50
 ALLOWED_TAG_PATTERN = re.compile(r"^[\w\s.+#,/&()\-]+$", re.UNICODE)
 

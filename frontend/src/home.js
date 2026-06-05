@@ -19,23 +19,29 @@ import { hasCoords } from './map.js';
 const TAG_CATEGORY_ORDER = ['specialization', 'level', 'tech', 'employment_type', 'format'];
 
 const levelTechMapping = {
-    'intern': ['html/css', 'git', 'javascript', 'python', 'figma', 'sql'],
-    'junior': ['html/css', 'git', 'javascript', 'python', 'figma', 'sql', 'react', 'vue', 'postgresql', 'django', 'fastapi', 'rest api', 'node.js'],
-    'middle': ['python', 'java', 'javascript', 'typescript', 'sql', 'react', 'vue', 'node.js', 'django', 'fastapi', 'postgresql', 'docker', 'git', 'linux', 'rest api', 'ci/cd'],
-    'senior': ['python', 'java', 'typescript', 'sql', 'react', 'angular', 'node.js', 'postgresql', 'docker', 'kubernetes', 'ci/cd', 'linux', 'pandas', 'bi', 'ml/ai', 'data science'],
-    'lead': ['python', 'java', 'sql', 'docker', 'kubernetes', 'ci/cd', 'linux', 'bi', 'ml/ai', 'data science']
+    'intern': ['html/css', 'git', 'javascript', 'python', 'figma', 'sql', 'sqlite'],
+    'junior': ['html/css', 'git', 'javascript', 'python', 'figma', 'sql', 'react', 'vue', 'postgresql', 'django', 'fastapi', 'rest api', 'node.js', 'tailwind css', 'sqlite', 'mysql'],
+    'junior+': ['html/css', 'git', 'javascript', 'typescript', 'python', 'figma', 'sql', 'react', 'vue', 'postgresql', 'django', 'fastapi', 'rest api', 'node.js', 'tailwind css', 'docker', 'next.js', 'nestjs', 'mysql', 'mongodb', 'sqlite'],
+    'middle': ['python', 'java', 'javascript', 'typescript', 'sql', 'react', 'vue', 'node.js', 'django', 'fastapi', 'postgresql', 'docker', 'git', 'linux', 'rest api', 'ci/cd', 'tailwind css', 'next.js', 'nestjs', 'spring boot', 'go', 'mysql', 'mongodb', 'redis', 'nginx'],
+    'middle+': ['python', 'java', 'javascript', 'typescript', 'sql', 'react', 'vue', 'node.js', 'django', 'fastapi', 'postgresql', 'docker', 'git', 'linux', 'rest api', 'ci/cd', 'next.js', 'nestjs', 'spring boot', 'go', 'rust', 'c#', 'c++', 'php', 'mysql', 'mongodb', 'redis', 'nginx', 'graphql', 'grpc', 'rabbitmq', 'ansible', 'aws'],
+    'senior': ['python', 'java', 'typescript', 'sql', 'react', 'angular', 'node.js', 'postgresql', 'docker', 'kubernetes', 'ci/cd', 'linux', 'pandas', 'bi', 'ml/ai', 'data science', 'go', 'rust', 'c#', 'c++', 'redis', 'elasticsearch', 'clickhouse', 'kafka', 'graphql', 'grpc', 'terraform', 'ansible', 'aws'],
+    'senior+': ['python', 'java', 'typescript', 'sql', 'react', 'angular', 'node.js', 'postgresql', 'docker', 'kubernetes', 'ci/cd', 'linux', 'pandas', 'bi', 'ml/ai', 'data science', 'go', 'rust', 'c#', 'c++', 'redis', 'elasticsearch', 'clickhouse', 'kafka', 'graphql', 'grpc', 'terraform', 'ansible', 'aws'],
+    'team lead': ['python', 'java', 'sql', 'docker', 'kubernetes', 'ci/cd', 'linux', 'bi', 'aws', 'terraform'],
+    'tech lead': ['python', 'java', 'sql', 'docker', 'kubernetes', 'ci/cd', 'linux', 'go', 'rust', 'clickhouse', 'kafka', 'graphql', 'grpc', 'terraform', 'aws'],
+    'architect': ['python', 'java', 'sql', 'docker', 'kubernetes', 'ci/cd', 'linux', 'go', 'rust', 'clickhouse', 'kafka', 'graphql', 'grpc', 'terraform', 'aws'],
+    'lead': ['python', 'java', 'sql', 'docker', 'kubernetes', 'ci/cd', 'linux', 'bi', 'ml/ai', 'data science', 'aws', 'terraform']
 };
 
 const specTechMapping = {
-    'frontend': ['html/css', 'javascript', 'typescript', 'react', 'vue', 'angular', 'figma', 'git'],
-    'backend': ['python', 'java', 'sql', 'node.js', 'django', 'fastapi', 'postgresql', 'docker', 'git', 'linux', 'rest api'],
-    'fullstack': ['html/css', 'javascript', 'typescript', 'react', 'vue', 'node.js', 'python', 'sql', 'postgresql', 'docker', 'git', 'rest api'],
-    'devops': ['docker', 'kubernetes', 'ci/cd', 'linux', 'git'],
-    'data analyst': ['sql', 'python', 'pandas', 'bi', 'postgresql', 'git'],
-    'data science': ['python', 'sql', 'pandas', 'ml/ai', 'postgresql', 'git'],
-    'ml/ai': ['python', 'ml/ai', 'pandas', 'docker', 'linux', 'git'],
-    'qa': ['python', 'javascript', 'sql', 'rest api', 'git', 'postgresql'],
-    'mobile': ['javascript', 'typescript', 'react', 'rest api', 'git'],
+    'frontend': ['html/css', 'javascript', 'typescript', 'react', 'vue', 'angular', 'figma', 'git', 'next.js', 'nuxt.js', 'svelte', 'tailwind css'],
+    'backend': ['python', 'java', 'sql', 'node.js', 'django', 'fastapi', 'postgresql', 'docker', 'git', 'linux', 'rest api', 'go', 'rust', 'c#', 'c++', 'php', 'ruby', 'spring boot', 'nestjs', 'laravel', 'asp.net core', 'mysql', 'redis', 'elasticsearch', 'clickhouse', 'graphql', 'grpc', 'rabbitmq', 'kafka', 'nginx'],
+    'fullstack': ['html/css', 'javascript', 'typescript', 'react', 'vue', 'node.js', 'python', 'sql', 'postgresql', 'docker', 'git', 'rest api', 'next.js', 'nestjs', 'tailwind css', 'mysql', 'redis', 'nginx'],
+    'devops': ['docker', 'kubernetes', 'ci/cd', 'linux', 'git', 'terraform', 'ansible', 'aws', 'grafana', 'prometheus', 'nginx'],
+    'data analyst': ['sql', 'python', 'pandas', 'bi', 'postgresql', 'git', 'sqlite', 'clickhouse'],
+    'data science': ['python', 'sql', 'pandas', 'ml/ai', 'postgresql', 'git', 'numpy', 'pytorch', 'tensorflow'],
+    'ml/ai': ['python', 'ml/ai', 'pandas', 'docker', 'linux', 'git', 'numpy', 'pytorch', 'tensorflow'],
+    'qa': ['python', 'javascript', 'sql', 'rest api', 'git', 'postgresql', 'sqlite', 'selenium'],
+    'mobile': ['javascript', 'typescript', 'react', 'rest api', 'git', 'swift', 'kotlin', 'dart', 'flutter', 'react native'],
     'ux/ui designer': ['figma', 'html/css']
 };
 

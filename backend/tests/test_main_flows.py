@@ -1459,7 +1459,7 @@ def test_tags_catalog_creation_and_public_filtering(client, db_session):
         "/tags/",
         headers=auth_headers(employer_token),
         json={
-            "name": "GraphQL",
+            "name": "GraphQLCustomTest",
             "category": "tech",
         },
     )
@@ -1483,7 +1483,7 @@ def test_tags_catalog_creation_and_public_filtering(client, db_session):
     filtered_response = client.get(f"/opportunities/?tag_ids={tag_id}")
     assert filtered_response.status_code == 200
     assert len(filtered_response.json()) == 1
-    assert filtered_response.json()[0]["tags"][0]["name"] == "GraphQL"
+    assert filtered_response.json()[0]["tags"][0]["name"] == "GraphQLCustomTest"
 
 
 def test_tag_creation_rejects_zalgo_and_enforces_category_limit(client, db_session):
