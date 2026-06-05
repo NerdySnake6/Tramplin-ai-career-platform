@@ -294,7 +294,7 @@ export function createHomeController({
                 ? `${opportunity.description.slice(0, 120)}...`
                 : opportunity.description;
 
-            const header = createEl('div', 'd-flex w-100 justify-content-between gap-2');
+            const header = createEl('div', 'd-flex flex-column gap-2 mb-2');
             const titleWrap = createEl('div', 'opportunity-title-wrap');
             const title = createEl('h3', 'h6 mb-1');
             const titleLink = createEl('a', 'opportunity-title-link', opportunity.title);
@@ -309,7 +309,7 @@ export function createHomeController({
             titleWrap.appendChild(createEl('div', 'small text-muted', opportunity.employer_name || 'Работодатель'));
             header.appendChild(titleWrap);
 
-            const badges = createEl('div', 'd-flex flex-wrap gap-1 justify-content-end align-items-start');
+            const badges = createEl('div', 'd-flex flex-wrap gap-1 align-items-center');
             badges.appendChild(createEl('small', 'opportunity-status-chip opportunity-type-chip', opportunityTypeLabel(opportunity.type)));
             if (opportunity.employer_is_verified) {
                 badges.appendChild(createEl('small', 'opportunity-status-chip bg-success', '✓ Проверено'));

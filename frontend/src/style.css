@@ -1186,8 +1186,8 @@ body.map-fullscreen-open::before {
     border-radius: 18px !important;
     background: #fff;
     min-width: 0;
-    overflow-wrap: anywhere;
-    word-break: break-word;
+    overflow-wrap: break-word;
+    word-break: normal;
 }
 
 .opportunity-item:hover,
