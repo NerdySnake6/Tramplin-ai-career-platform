@@ -115,7 +115,7 @@ export function createHomeController({
             card.dataset.opportunityId = String(opportunity.id);
             const body = createEl('div', 'card-body py-3');
 
-            const top = createEl('div', 'd-flex justify-content-between align-items-start gap-2 mb-2');
+            const top = createEl('div', 'd-flex flex-column gap-2 mb-2');
             const titleWrap = createEl('div', 'opportunity-title-wrap');
             const title = createEl('h3', 'card-title h5 mb-1');
             const titleLink = createEl('a', 'opportunity-title-link', opportunity.title);
@@ -130,7 +130,7 @@ export function createHomeController({
             titleWrap.appendChild(createEl('div', 'detail-meta', opportunity.employer_name || 'Работодатель'));
             top.appendChild(titleWrap);
 
-            const badges = createEl('div', 'd-flex flex-wrap justify-content-end gap-1');
+            const badges = createEl('div', 'd-flex flex-wrap gap-1');
             badges.appendChild(createEl('small', 'opportunity-status-chip opportunity-type-chip', opportunityTypeLabel(opportunity.type)));
             if (opportunity.employer_is_verified) {
                 badges.appendChild(createEl('small', 'opportunity-status-chip bg-success', '✓ Проверен куратором'));

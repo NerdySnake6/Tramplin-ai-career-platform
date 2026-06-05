@@ -1653,8 +1653,8 @@ body.map-fullscreen-open::before {
     transition: background-color 0.18s ease, border-color 0.18s ease;
     min-width: 0;
     overflow: hidden;
-    overflow-wrap: anywhere;
-    word-break: break-word;
+    overflow-wrap: break-word;
+    word-break: normal;
 }
 
 .employer-home-opportunity-card:hover {
