@@ -209,7 +209,24 @@ def test_opportunity_assist_warns_about_unreasonable_salary(client, monkeypatch)
     assert "Проверь поле вознаграждения: значение выглядит некорректным." in payload["warnings"]
     assert "123333" not in payload["description"]
 
-    # 2. Test negative value
+    # 2. Test dotted thousands value > 3M
+    response = client.post(
+        "/ai/opportunity-assist",
+        headers=headers,
+        json={
+            "title": "Junior developer",
+            "description": "Помощь команде с задачами разработки.",
+            "type": "job",
+            "work_format": "hybrid",
+            "location": "Москва",
+            "salary_range": "100.000.000",
+        },
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert "Проверь поле вознаграждения: значение выглядит некорректным." in payload["warnings"]
+
+    # 3. Test negative value
     response = client.post(
         "/ai/opportunity-assist",
         headers=headers,
@@ -226,7 +243,7 @@ def test_opportunity_assist_warns_about_unreasonable_salary(client, monkeypatch)
     payload = response.json()
     assert "Проверь поле вознаграждения: значение выглядит некорректным." in payload["warnings"]
 
-    # 3. Test value > 3M
+    # 4. Test value > 3M
     response = client.post(
         "/ai/opportunity-assist",
         headers=headers,

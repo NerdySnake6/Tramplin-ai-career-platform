@@ -19,6 +19,21 @@ export function normalizeUrl(value) {
     return text || null;
 }
 
+export function apiErrorMessage(error, fallback) {
+    const detail = error?.detail;
+    if (typeof detail === 'string') {
+        return detail.replace(/^Value error,\s*/u, '');
+    }
+    if (Array.isArray(detail)) {
+        const messages = detail
+            .map((item) => (typeof item === 'string' ? item : item?.msg))
+            .filter((message) => typeof message === 'string' && message.trim())
+            .map((message) => message.replace(/^Value error,\s*/u, ''));
+        if (messages.length) return messages[0];
+    }
+    return fallback;
+}
+
 export function selectedTagIdsFromContainer(containerId) {
     return Array.from(document.querySelectorAll(`#${containerId} .tag-choice.active`))
         .map((item) => Number(item.dataset.tagId))

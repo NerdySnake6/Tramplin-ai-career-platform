@@ -15,6 +15,8 @@ UNPAID_MARKERS = (
     "без вознаграждения",
 )
 MAX_REASONABLE_REWARD = 3_000_000
+NUMBER_TOKEN_PATTERN = re.compile(r"\d+(?:[\s.,\u00a0\u202f]\d+)*")
+NUMBER_SEPARATOR_PATTERN = re.compile(r"[\s.,\u00a0\u202f]+")
 
 
 @dataclass(frozen=True)
@@ -26,6 +28,20 @@ class SalaryInfo:
     is_paid: bool
 
 
+def _extract_salary_number_strings(value: str) -> list[str]:
+    """Возвращает числовые токены зарплаты без разделителей тысяч."""
+    return [
+        normalized
+        for token in NUMBER_TOKEN_PATTERN.findall(value)
+        if (normalized := NUMBER_SEPARATOR_PATTERN.sub("", token))
+    ]
+
+
+def _extract_salary_numbers(value: str) -> list[int]:
+    """Возвращает числовые значения зарплаты из текста."""
+    return [int(item) for item in _extract_salary_number_strings(value)]
+
+
 def parse_salary_range(value: str | None) -> SalaryInfo:
     """Извлекает диапазон и признак оплаты из произвольной текстовой зарплаты."""
     text = (value or "").strip().lower()
@@ -33,7 +49,7 @@ def parse_salary_range(value: str | None) -> SalaryInfo:
         return SalaryInfo(min_value=None, max_value=None, is_paid=False)
 
     is_unpaid = any(marker in text for marker in UNPAID_MARKERS)
-    numbers = [int(item.replace(" ", "")) for item in re.findall(r"\d[\d\s]*", text)]
+    numbers = _extract_salary_numbers(text)
     if not numbers:
         return SalaryInfo(min_value=None, max_value=None, is_paid=not is_unpaid)
 
@@ -67,7 +83,7 @@ def has_unreasonable_salary_number(value: str | None) -> bool:
     if re.search(r"-\s*\d", normalized_text):
         return True
 
-    numbers_as_text = [item.replace(" ", "") for item in re.findall(r"\d[\d\s]*", normalized_text)]
+    numbers_as_text = _extract_salary_number_strings(normalized_text)
     if any(len(item) > 9 for item in numbers_as_text):
         return True
 

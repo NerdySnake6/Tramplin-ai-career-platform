@@ -957,7 +957,41 @@ def test_employer_cannot_create_opportunity_with_unreasonable_salary(client, db_
     assert response.status_code == 422
     assert "реалистичное вознаграждение" in response.text
 
-    # 4. Accept salary 3_000_000
+    # 4. Reject salary with dots as thousands separators
+    response = client.post(
+        "/opportunities/",
+        headers=auth_headers(token),
+        json={
+            "title": "Junior Backend Developer",
+            "description": "Работа с Python и FastAPI под руководством опытного наставника.",
+            "type": "job",
+            "work_format": "hybrid",
+            "location": "Москва",
+            "salary_range": "100.000.000",
+            "tag_ids": [],
+        },
+    )
+    assert response.status_code == 422
+    assert "реалистичное вознаграждение" in response.text
+
+    # 5. Reject salary with commas as thousands separators
+    response = client.post(
+        "/opportunities/",
+        headers=auth_headers(token),
+        json={
+            "title": "Junior Backend Developer",
+            "description": "Работа с Python и FastAPI под руководством опытного наставника.",
+            "type": "job",
+            "work_format": "hybrid",
+            "location": "Москва",
+            "salary_range": "100,000,000",
+            "tag_ids": [],
+        },
+    )
+    assert response.status_code == 422
+    assert "реалистичное вознаграждение" in response.text
+
+    # 6. Accept salary 3_000_000
     response = client.post(
         "/opportunities/",
         headers=auth_headers(token),

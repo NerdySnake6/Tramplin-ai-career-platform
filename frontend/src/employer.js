@@ -1,4 +1,5 @@
 import {
+    apiErrorMessage,
     createEl,
     el,
     formatDate,
@@ -498,7 +499,7 @@ export function createEmployerController({
 
         if (!response.ok) {
             const error = await response.json().catch(() => ({ detail: 'Не удалось сохранить карточку.' }));
-            showNotice('danger', typeof error.detail === 'string' ? error.detail : 'Не удалось сохранить карточку.');
+            showNotice('danger', apiErrorMessage(error, 'Не удалось сохранить карточку.'));
             return false;
         }
 

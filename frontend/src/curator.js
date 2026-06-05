@@ -1,4 +1,5 @@
 import {
+    apiErrorMessage,
     createEl,
     curatorRoleLabel,
     el,
@@ -75,7 +76,7 @@ export function createCuratorController({
 
         if (!response.ok) {
             const error = await response.json().catch(() => ({ detail: 'Не удалось обновить карточку.' }));
-            showNotice('danger', typeof error.detail === 'string' ? error.detail : 'Не удалось обновить карточку.');
+            showNotice('danger', apiErrorMessage(error, 'Не удалось обновить карточку.'));
             return;
         }
 
