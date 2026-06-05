@@ -45,8 +45,17 @@ const specTechMapping = {
     'ux/ui designer': ['figma', 'html/css']
 };
 
-let techSearchQuery = '';
-let allTechShown = false;
+const techSearchQueries = {
+    filterTagOptions: '',
+    employerOpportunityTagOptions: '',
+    curatorOpportunityTags: ''
+};
+
+const allTechShownStates = {
+    filterTagOptions: false,
+    employerOpportunityTagOptions: false,
+    curatorOpportunityTags: false
+};
 
 export function createHomeController({
     state,
@@ -462,8 +471,14 @@ export function createHomeController({
         el('filterFavorites').value = '';
         if (el('filterSalary')) el('filterSalary').value = '';
         state.opportunityFilters.tagIds = [];
-        techSearchQuery = '';
-        allTechShown = false;
+        
+        Object.keys(techSearchQueries).forEach(key => {
+            techSearchQueries[key] = '';
+        });
+        Object.keys(allTechShownStates).forEach(key => {
+            allTechShownStates[key] = false;
+        });
+
         renderTagChoices('filterTagOptions', []);
         applyOpportunityFilters();
     }
@@ -543,7 +558,7 @@ export function createHomeController({
 
         const selectedIdSet = new Set(selectedIds.map(Number));
 
-        if (containerId === 'filterTagOptions') {
+        if (['filterTagOptions', 'employerOpportunityTagOptions', 'curatorOpportunityTags'].includes(containerId)) {
             const grid = createEl('div', 'filter-tags-grid');
             
             const specializations = state.tags.filter(tag => tag.category === 'specialization');
@@ -561,10 +576,14 @@ export function createHomeController({
                 if (toggleable) {
                     button.addEventListener('click', () => {
                         button.classList.toggle('active');
-                        state.opportunityFilters.tagIds = selectedTagIdsFromContainer('filterTagOptions');
-                        renderTagChoices('filterTagOptions', state.opportunityFilters.tagIds);
-                        resetOpportunityPage();
-                        void loadOpportunities();
+                        const selectedIds = selectedTagIdsFromContainer(containerId);
+                        renderTagChoices(containerId, selectedIds);
+                        
+                        if (containerId === 'filterTagOptions') {
+                            state.opportunityFilters.tagIds = selectedIds;
+                            resetOpportunityPage();
+                            void loadOpportunities();
+                        }
                     });
                 }
                 return button;
@@ -648,11 +667,11 @@ export function createHomeController({
                 const searchInput = createEl('input', 'tech-search-input');
                 searchInput.type = 'text';
                 searchInput.placeholder = '🔍 Начните вводить технологию...';
-                searchInput.value = techSearchQuery;
+                searchInput.value = techSearchQueries[containerId] || '';
                 
                 const clearBtn = createEl('button', 'tech-search-clear', '×');
                 clearBtn.type = 'button';
-                clearBtn.style.display = techSearchQuery ? 'block' : 'none';
+                clearBtn.style.display = techSearchQueries[containerId] ? 'block' : 'none';
                 
                 searchWrapper.appendChild(searchInput);
                 searchWrapper.appendChild(clearBtn);
@@ -665,13 +684,13 @@ export function createHomeController({
                 const otherHeading = createEl('div', 'tech-subheading', 'Другие технологии');
                 const otherRow = createEl('div', 'filter-pills-row tech-tags-container');
                 
-                otherHeading.style.display = allTechShown || techSearchQuery ? 'block' : 'none';
-                otherRow.style.display = allTechShown || techSearchQuery ? 'flex' : 'none';
+                otherHeading.style.display = allTechShownStates[containerId] || techSearchQueries[containerId] ? 'block' : 'none';
+                otherRow.style.display = allTechShownStates[containerId] || techSearchQueries[containerId] ? 'flex' : 'none';
                 
                 const toggleBtn = createEl('button', 'toggle-all-tech-btn');
                 toggleBtn.type = 'button';
-                toggleBtn.innerHTML = allTechShown ? '✕ Скрыть другие' : '⚙ Показать все технологии';
-                toggleBtn.style.display = (otherTechs.length > 0 && !techSearchQuery) ? 'inline-flex' : 'none';
+                toggleBtn.innerHTML = allTechShownStates[containerId] ? '✕ Скрыть другие' : '⚙ Показать все технологии';
+                toggleBtn.style.display = (otherTechs.length > 0 && !techSearchQueries[containerId]) ? 'inline-flex' : 'none';
 
                 const createTechButton = (tag) => {
                     const isActive = selectedIdSet.has(tag.id);
@@ -683,10 +702,14 @@ export function createHomeController({
                     if (toggleable) {
                         button.addEventListener('click', () => {
                             button.classList.toggle('active');
-                            state.opportunityFilters.tagIds = selectedTagIdsFromContainer('filterTagOptions');
-                            renderTagChoices('filterTagOptions', state.opportunityFilters.tagIds);
-                            resetOpportunityPage();
-                            void loadOpportunities();
+                            const selectedIds = selectedTagIdsFromContainer(containerId);
+                            renderTagChoices(containerId, selectedIds);
+                            
+                            if (containerId === 'filterTagOptions') {
+                                state.opportunityFilters.tagIds = selectedIds;
+                                resetOpportunityPage();
+                                void loadOpportunities();
+                            }
                         });
                     }
                     return button;
@@ -704,10 +727,29 @@ export function createHomeController({
                     techSection.appendChild(toggleBtn);
                 }
 
+                // Apply initial search filter if a query exists
+                const initialQuery = techSearchQueries[containerId] || '';
+                if (initialQuery) {
+                    const allTechButtons = techSection.querySelectorAll('.tech-tags-container .tag-choice');
+                    let hasVisibleOthers = false;
+                    allTechButtons.forEach(btn => {
+                        const name = btn.dataset.tagName || '';
+                        const matches = name.includes(initialQuery);
+                        btn.style.display = matches ? 'inline-block' : 'none';
+                        if (otherRow.contains(btn) && matches) {
+                            hasVisibleOthers = true;
+                        }
+                    });
+                    otherHeading.style.display = hasVisibleOthers ? 'block' : 'none';
+                    otherRow.style.display = hasVisibleOthers ? 'flex' : 'none';
+                    toggleBtn.style.display = 'none';
+                    recommendedHeading.style.display = 'none';
+                }
+
                 // Add search & clear listeners
                 searchInput.addEventListener('input', (e) => {
                     const query = e.target.value.trim().toLowerCase();
-                    techSearchQuery = query;
+                    techSearchQueries[containerId] = query;
                     clearBtn.style.display = query ? 'block' : 'none';
                     
                     const allTechButtons = techSection.querySelectorAll('.tech-tags-container .tag-choice');
@@ -730,15 +772,15 @@ export function createHomeController({
                         recommendedHeading.style.display = 'none';
                     } else {
                         recommendedHeading.style.display = 'block';
-                        otherHeading.style.display = allTechShown ? 'block' : 'none';
-                        otherRow.style.display = allTechShown ? 'flex' : 'none';
+                        otherHeading.style.display = allTechShownStates[containerId] ? 'block' : 'none';
+                        otherRow.style.display = allTechShownStates[containerId] ? 'flex' : 'none';
                         toggleBtn.style.display = 'inline-flex';
                     }
                 });
                 
                 clearBtn.addEventListener('click', () => {
                     searchInput.value = '';
-                    techSearchQuery = '';
+                    techSearchQueries[containerId] = '';
                     clearBtn.style.display = 'none';
                     
                     const allTechButtons = techSection.querySelectorAll('.tech-tags-container .tag-choice');
@@ -747,17 +789,18 @@ export function createHomeController({
                     });
                     
                     recommendedHeading.style.display = 'block';
-                    otherHeading.style.display = allTechShown ? 'block' : 'none';
-                    otherRow.style.display = allTechShown ? 'flex' : 'none';
+                    otherHeading.style.display = allTechShownStates[containerId] ? 'block' : 'none';
+                    otherRow.style.display = allTechShownStates[containerId] ? 'flex' : 'none';
                     toggleBtn.style.display = otherTechs.length > 0 ? 'inline-flex' : 'none';
                     searchInput.focus();
                 });
                 
                 toggleBtn.addEventListener('click', () => {
-                    allTechShown = !allTechShown;
-                    toggleBtn.innerHTML = allTechShown ? '✕ Скрыть другие' : '⚙ Показать все технологии';
-                    otherHeading.style.display = allTechShown ? 'block' : 'none';
-                    otherRow.style.display = allTechShown ? 'flex' : 'none';
+                    allTechShownStates[containerId] = !allTechShownStates[containerId];
+                    const isShown = allTechShownStates[containerId];
+                    toggleBtn.innerHTML = isShown ? '✕ Скрыть другие' : '⚙ Показать все технологии';
+                    otherHeading.style.display = isShown ? 'block' : 'none';
+                    otherRow.style.display = isShown ? 'flex' : 'none';
                 });
 
                 grid.appendChild(techSection);
