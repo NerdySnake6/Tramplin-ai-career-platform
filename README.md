@@ -117,9 +117,13 @@ POSTGRES_DB=tramplin_db
 POSTGRES_HOST=localhost
 POSTGRES_PORT=5432
 TRAMPLIN_SECRET_KEY=локальная_случайная_строка
+ACCESS_TOKEN_EXPIRE_MINUTES=43200
 TRAMPLIN_ADMIN_EMAIL=admin@example.com
 TRAMPLIN_ADMIN_PASSWORD=admin12345
 TRAMPLIN_ADMIN_NAME=Администратор
+TRAMPLIN_CURATOR_EMAIL=curator@example.com
+TRAMPLIN_CURATOR_PASSWORD=curator12345
+TRAMPLIN_CURATOR_NAME=Куратор
 ```
 
 Где:
@@ -127,7 +131,9 @@ TRAMPLIN_ADMIN_NAME=Администратор
 - `YANDEX_GEOCODER_API_KEY` — ключ Яндекс Карт
 - `POSTGRES_*` — параметры локального PostgreSQL
 - `TRAMPLIN_SECRET_KEY` — секрет подписи JWT-токенов
+- `ACCESS_TOKEN_EXPIRE_MINUTES` — срок жизни авторизации; `43200` минут равны 30 дням
 - `TRAMPLIN_ADMIN_*` — данные первого администратора для локальной базы
+- `TRAMPLIN_CURATOR_*` — данные тестового куратора для демо
 
 ### `frontend/.env.local`
 
@@ -269,9 +275,13 @@ cp docker.env.example .env
 YANDEX_GEOCODER_API_KEY=твой_ключ_яндекс_карт
 VITE_YANDEX_MAPS_API_KEY=твой_ключ_яндекс_карт
 TRAMPLIN_SECRET_KEY=случайная_длинная_строка
+ACCESS_TOKEN_EXPIRE_MINUTES=43200
 TRAMPLIN_ADMIN_EMAIL=admin@example.com
 TRAMPLIN_ADMIN_PASSWORD=надежный_пароль
 TRAMPLIN_ADMIN_NAME=Администратор
+TRAMPLIN_CURATOR_EMAIL=curator@example.com
+TRAMPLIN_CURATOR_PASSWORD=надежный_пароль_куратора
+TRAMPLIN_CURATOR_NAME=Куратор
 TRAMPLIN_AUTO_VERIFY_EMPLOYERS=false
 SMTP_HOST=smtp-relay.brevo.com
 SMTP_PORT=587
@@ -511,12 +521,16 @@ docker compose exec backend env TRAMPLIN_SQLITE_BACKUP_PATH=/app/tramplin_backup
 TRAMPLIN_ADMIN_EMAIL=admin@example.com
 TRAMPLIN_ADMIN_PASSWORD=надежный_пароль
 TRAMPLIN_ADMIN_NAME=Администратор
+TRAMPLIN_CURATOR_EMAIL=curator@example.com
+TRAMPLIN_CURATOR_PASSWORD=надежный_пароль_куратора
+TRAMPLIN_CURATOR_NAME=Куратор
 ```
 
 Важно:
 
 - администратор создается только если в БД еще нет роли `admin`
 - если `TRAMPLIN_ADMIN_EMAIL` или `TRAMPLIN_ADMIN_PASSWORD` не заданы, администратор автоматически не создается
+- тестовый куратор создается или обновляется по `TRAMPLIN_CURATOR_EMAIL`, если заданы `TRAMPLIN_CURATOR_EMAIL` и `TRAMPLIN_CURATOR_PASSWORD`
 - в базе хранится не открытый пароль, а его хеш
 - входить нужно обычным паролем, который был задан при инициализации
 - `TRAMPLIN_AUTO_VERIFY_EMPLOYERS=false` оставляет ручную модерацию работодателей; значение `true` стоит включать только для закрытого демо-режима

@@ -149,6 +149,8 @@ class TagOut(TagBase):
     model_config = ConfigDict(from_attributes=True)
 
 class OpportunityBase(BaseModel):
+    """Общие поля карточки возможности без входных валидаторов."""
+
     title: str = Field(min_length=5, max_length=200)
     description: str = Field(min_length=20, max_length=3000)
     type: Literal["internship", "job", "mentorship", "event"]
@@ -161,15 +163,17 @@ class OpportunityBase(BaseModel):
     event_date: Optional[datetime] = None
     is_active: bool = True
 
+
+class OpportunityCreate(OpportunityBase):
+    """Данные для создания карточки возможности."""
+
+    tag_ids: Optional[List[int]] = None
+
     @field_validator("salary_range")
     @classmethod
     def salary_range_must_be_readable(cls, value: Optional[str]) -> Optional[str]:
         """Проверяет человекочитаемость вознаграждения."""
         return validate_salary_range_text(value)
-
-
-class OpportunityCreate(OpportunityBase):
-    tag_ids: Optional[List[int]] = None
 
 
 class OpportunityUpdate(BaseModel):

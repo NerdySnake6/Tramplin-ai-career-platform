@@ -42,6 +42,9 @@ def configure_test_database(tmp_path, monkeypatch):
     monkeypatch.delenv("TRAMPLIN_ADMIN_EMAIL", raising=False)
     monkeypatch.delenv("TRAMPLIN_ADMIN_PASSWORD", raising=False)
     monkeypatch.delenv("TRAMPLIN_ADMIN_NAME", raising=False)
+    monkeypatch.delenv("TRAMPLIN_CURATOR_EMAIL", raising=False)
+    monkeypatch.delenv("TRAMPLIN_CURATOR_PASSWORD", raising=False)
+    monkeypatch.delenv("TRAMPLIN_CURATOR_NAME", raising=False)
 
     return engine, db_url
 
@@ -130,6 +133,60 @@ def test_init_db_seeds_admin_only_from_explicit_environment(tmp_path, monkeypatc
         engine.dispose()
 
 
+def test_init_db_seeds_curator_from_explicit_environment(tmp_path, monkeypatch):
+    """Проверяет, что тестовый куратор создается из явных переменных окружения."""
+    engine, db_url = configure_test_database(tmp_path, monkeypatch)
+    alembic_config = build_alembic_config(db_url)
+    monkeypatch.setenv("TRAMPLIN_CURATOR_EMAIL", "curator@example.com")
+    monkeypatch.setenv("TRAMPLIN_CURATOR_PASSWORD", "supersecret")
+    monkeypatch.setenv("TRAMPLIN_CURATOR_NAME", "Куратор")
+
+    command.upgrade(alembic_config, "head")
+    database.init_db()
+
+    session = database.SessionLocal()
+    try:
+        curators = session.query(models.User).filter(models.User.role == "curator").all()
+        assert len(curators) == 1
+        assert curators[0].email == "curator@example.com"
+        assert curators[0].display_name == "Куратор"
+        assert curators[0].is_email_verified is True
+    finally:
+        session.close()
+        engine.dispose()
+
+
+def test_seed_default_curator_updates_existing_user(monkeypatch):
+    """Проверяет, что сидер куратора обновляет существующий аккаунт по email."""
+    existing_user = models.User(
+        email="curator@example.com",
+        hashed_password="old-hash",
+        display_name="Старое имя",
+        role="applicant",
+        is_active=False,
+        is_verified=False,
+        is_email_verified=False,
+    )
+    session = Mock()
+    session.query.return_value.filter.return_value.first.return_value = existing_user
+
+    monkeypatch.setattr(database, "SessionLocal", lambda: session)
+    monkeypatch.setenv("TRAMPLIN_CURATOR_EMAIL", "curator@example.com")
+    monkeypatch.setenv("TRAMPLIN_CURATOR_PASSWORD", "supersecret")
+    monkeypatch.setenv("TRAMPLIN_CURATOR_NAME", "Куратор")
+
+    database.seed_default_curator()
+
+    assert existing_user.role == "curator"
+    assert existing_user.display_name == "Куратор"
+    assert existing_user.is_active is True
+    assert existing_user.is_verified is True
+    assert existing_user.is_email_verified is True
+    session.add.assert_not_called()
+    session.commit.assert_called_once()
+    session.close.assert_called_once()
+
+
 def test_email_verification_migration_keeps_existing_users_enabled(tmp_path, monkeypatch):
     """Проверяет, что миграция не блокирует уже созданные аккаунты."""
     engine, db_url = configure_test_database(tmp_path, monkeypatch)
@@ -209,6 +266,23 @@ def test_seed_default_admin_handles_integrity_error(monkeypatch):
     monkeypatch.setenv("TRAMPLIN_ADMIN_PASSWORD", "supersecret")
 
     database.seed_default_admin()
+
+    session.add.assert_called_once()
+    session.rollback.assert_called_once()
+    session.close.assert_called_once()
+
+
+def test_seed_default_curator_handles_integrity_error(monkeypatch):
+    """Проверяет, что сидер куратора не падает при конкурентной вставке."""
+    session = Mock()
+    session.query.return_value.filter.return_value.first.return_value = None
+    session.commit.side_effect = make_integrity_error()
+
+    monkeypatch.setattr(database, "SessionLocal", lambda: session)
+    monkeypatch.setenv("TRAMPLIN_CURATOR_EMAIL", "curator@example.com")
+    monkeypatch.setenv("TRAMPLIN_CURATOR_PASSWORD", "supersecret")
+
+    database.seed_default_curator()
 
     session.add.assert_called_once()
     session.rollback.assert_called_once()

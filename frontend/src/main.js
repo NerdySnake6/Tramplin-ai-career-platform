@@ -1924,9 +1924,15 @@ async function bootstrap() {
     refreshFieldCounters();
 
     try {
+        await loadCurrentUser();
+    } catch (error) {
+        console.error(error);
+        renderAuthUI();
+    }
+
+    try {
         await loadTags();
         await loadOpportunities();
-        await loadCurrentUser();
 
         if (currentPublicRoute.key === 'opportunity') {
             openOpportunityDetailsModal(currentPublicRoute.opportunityId);

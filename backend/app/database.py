@@ -201,6 +201,7 @@ def init_db():
 
     seed_default_tags()
     seed_default_admin()
+    seed_default_curator()
 
 
 def seed_default_tags():
@@ -240,7 +241,9 @@ def seed_default_admin():
 
         admin_email = (os.getenv("TRAMPLIN_ADMIN_EMAIL") or "").strip()
         admin_password = os.getenv("TRAMPLIN_ADMIN_PASSWORD")
-        admin_name = (os.getenv("TRAMPLIN_ADMIN_NAME") or "Администратор").strip() or "Администратор"
+        admin_name = (
+            os.getenv("TRAMPLIN_ADMIN_NAME") or "Администратор"
+        ).strip() or "Администратор"
         if not admin_email or not admin_password:
             return
 
@@ -254,6 +257,50 @@ def seed_default_admin():
             is_email_verified=True,
         )
         db.add(admin_user)
+        try:
+            db.commit()
+        except IntegrityError:
+            db.rollback()
+    finally:
+        db.close()
+
+
+def seed_default_curator():
+    """Создает тестового куратора из переменных окружения, если он задан."""
+    db = SessionLocal()
+    try:
+        curator_email = (os.getenv("TRAMPLIN_CURATOR_EMAIL") or "").strip()
+        curator_password = os.getenv("TRAMPLIN_CURATOR_PASSWORD")
+        curator_name = (
+            os.getenv("TRAMPLIN_CURATOR_NAME") or "Куратор"
+        ).strip() or "Куратор"
+        if not curator_email or not curator_password:
+            return
+
+        existing_user = (
+            db.query(models.User)
+            .filter(models.User.email == curator_email)
+            .first()
+        )
+        if existing_user:
+            existing_user.hashed_password = get_password_hash(curator_password)
+            existing_user.display_name = curator_name
+            existing_user.role = "curator"
+            existing_user.is_active = True
+            existing_user.is_verified = True
+            existing_user.is_email_verified = True
+        else:
+            db.add(
+                models.User(
+                    email=curator_email,
+                    hashed_password=get_password_hash(curator_password),
+                    display_name=curator_name,
+                    role="curator",
+                    is_active=True,
+                    is_verified=True,
+                    is_email_verified=True,
+                )
+            )
         try:
             db.commit()
         except IntegrityError:

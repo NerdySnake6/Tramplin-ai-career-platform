@@ -1008,6 +1008,37 @@ def test_employer_cannot_create_opportunity_with_unreasonable_salary(client, db_
     assert response.status_code == 201
 
 
+def test_public_opportunities_tolerate_legacy_invalid_salary(client, db_session):
+    """Проверяет, что старая невалидная зарплата в БД не роняет публичный список."""
+    employer = models.User(
+        email="legacy-salary-employer@example.com",
+        hashed_password=get_password_hash("supersecret"),
+        display_name="Legacy Salary Employer",
+        role="employer",
+        is_verified=True,
+    )
+    db_session.add(employer)
+    db_session.flush()
+
+    opportunity = models.Opportunity(
+        employer_id=employer.id,
+        title="Legacy Salary Job",
+        description="Карточка со старым значением зарплаты, которое уже лежит в базе.",
+        type="job",
+        work_format="office",
+        location="Москва",
+        salary_range="100.000.000",
+        is_active=True,
+    )
+    db_session.add(opportunity)
+    db_session.commit()
+
+    response = client.get("/opportunities/")
+
+    assert response.status_code == 200
+    assert response.json()[0]["salary_range"] == "100.000.000"
+
+
 def test_employer_can_manage_own_opportunities(client, db_session):
     """Проверяет создание, просмотр, редактирование и удаление своих карточек работодателем."""
     register_response = register_user(
