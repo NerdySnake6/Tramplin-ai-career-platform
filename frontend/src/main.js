@@ -73,6 +73,7 @@ let mapAutoloadObserver = null;
 let mapResizeObserver = null;
 let mapHeightObserver = null;
 let mapHeightFrameId = null;
+let mapFullscreenActive = false;
 let userHasInteracted = false;
 let pendingVerificationEmail = '';
 
@@ -231,10 +232,11 @@ function renderMapShellState() {
     const mapStage = el('mapStage');
     const mapLoader = el('mapLoader');
     const mapButton = el('loadMapBtn');
+    const mapFullscreenButton = el('mapFullscreenBtn');
     const mapStatusText = el('mapStatusText');
     const mapCanvas = el('map');
 
-    if (!mapStage || !mapLoader || !mapButton || !mapStatusText || !mapCanvas) return;
+    if (!mapStage || !mapLoader || !mapButton || !mapFullscreenButton || !mapStatusText || !mapCanvas) return;
 
     const isReady = mapUiState === MAP_UI_STATE.ready;
     const isLoading = mapUiState === MAP_UI_STATE.loading;
@@ -250,6 +252,29 @@ function renderMapShellState() {
     mapButton.textContent = mapUiState === MAP_UI_STATE.loading
         ? 'Загружаем...'
         : 'Повторить загрузку карты';
+
+    mapFullscreenButton.disabled = isLoading;
+    mapFullscreenButton.setAttribute('aria-pressed', String(mapFullscreenActive));
+    mapFullscreenButton.textContent = mapFullscreenActive ? 'Свернуть карту' : 'На весь экран';
+}
+
+function setMapFullscreen(isFullscreen) {
+    const mapStage = el('mapStage');
+    if (!mapStage || mapFullscreenActive === isFullscreen) return;
+
+    mapFullscreenActive = isFullscreen;
+    mapStage.classList.toggle('is-fullscreen', mapFullscreenActive);
+    document.body.classList.toggle('map-fullscreen-open', mapFullscreenActive);
+    renderMapShellState();
+    if (mapFullscreenActive) {
+        void ensureMapReady();
+    }
+    window.setTimeout(resizeMap, 80);
+    window.setTimeout(resizeMap, 260);
+}
+
+function toggleMapFullscreen() {
+    setMapFullscreen(!mapFullscreenActive);
 }
 
 function canAutoloadMap() {
@@ -1770,6 +1795,14 @@ function bindEvents() {
     });
     el('loadMapBtn').addEventListener('click', () => {
         void ensureMapReady();
+    });
+    el('mapFullscreenBtn').addEventListener('click', () => {
+        toggleMapFullscreen();
+    });
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && mapFullscreenActive) {
+            setMapFullscreen(false);
+        }
     });
     el('openAdvancedFiltersBtn').addEventListener('click', () => {
         advancedFiltersModal.show();

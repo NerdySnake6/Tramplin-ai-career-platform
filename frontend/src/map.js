@@ -174,7 +174,7 @@ export function createMapController({
             zoom: 10,
             controls: ['zoomControl'],
         });
-        map.behaviors.disable('scrollZoom');
+        map.behaviors.enable('scrollZoom');
         if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
             map.behaviors.disable('drag');
         }
