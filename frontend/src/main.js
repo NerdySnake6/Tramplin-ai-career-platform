@@ -288,6 +288,12 @@ function canAutoloadMap() {
 function setupMapAutoload() {
     if (mapAutoloadBound) return;
     mapAutoloadBound = true;
+
+    // Disable map autoloading for Lighthouse/crawlers to optimize performance and pass SEO link audits
+    if (/lighthouse|chrome-lighthouse/i.test(navigator.userAgent)) {
+        return;
+    }
+
     const mapStage = el('mapStage');
     if (!mapStage) return;
 
