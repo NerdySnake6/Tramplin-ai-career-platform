@@ -1447,7 +1447,7 @@ async function resendVerificationEmail(email) {
     });
 }
 
-function showEmailVerificationNotice(kind, text, email) {
+function showEmailVerificationNotice(kind, text, email, options = {}) {
     if (email) {
         pendingVerificationEmail = email;
     }
@@ -1458,7 +1458,25 @@ function showEmailVerificationNotice(kind, text, email) {
             void resendVerificationEmail(email);
         },
         autoClose: false,
+        ...options,
     });
+}
+
+function showPostRegistrationVerificationNotice(email) {
+    pendingVerificationEmail = email;
+    el('loginEmail').value = email;
+
+    const loginModalEl = el('loginModal');
+    loginModalEl.addEventListener('shown.bs.modal', () => {
+        showEmailVerificationNotice(
+            'success',
+            `Аккаунт создан. Мы отправили письмо на ${email}. Подтверди почту, затем войди в систему.`,
+            email,
+            { placement: 'modal' }
+        );
+        el('loginPassword')?.focus();
+    }, { once: true });
+    loginModal.show();
 }
 
 async function handleLoginSubmit(event) {
@@ -1472,8 +1490,9 @@ async function handleLoginSubmit(event) {
         if (result.status === 403) {
             showEmailVerificationNotice(
                 'warning',
-                `Сначала подтверди email. Мы отправили ссылку на ${email}.`,
-                email
+                `Сначала подтверди email ${email}. Проверь письмо подтверждения или отправь ссылку еще раз.`,
+                email,
+                { placement: 'modal' }
             );
             return;
         }
@@ -1541,14 +1560,12 @@ async function handleRegisterSubmit(event) {
         return;
     }
 
+    const registeredEmail = payload.email;
+    el('registerModal').addEventListener('hidden.bs.modal', () => {
+        showPostRegistrationVerificationNotice(registeredEmail);
+    }, { once: true });
     registerModal.hide();
     event.target.reset();
-    el('loginEmail').value = payload.email;
-    showEmailVerificationNotice(
-        'success',
-        `Аккаунт создан. Мы отправили письмо на ${payload.email}. Подтверди почту, затем войди в систему.`,
-        payload.email
-    );
 }
 
 function handleEmailVerificationQuery() {
