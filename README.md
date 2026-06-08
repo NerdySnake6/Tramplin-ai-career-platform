@@ -32,11 +32,11 @@
 
 ### Публичная витрина
 
-![Публичная витрина Трамплин](docs/screenshots/home.jpg)
+![Публичная витрина Трамплин](docs/screenshots/home.png)
 
 ### Карта и каталог возможностей
 
-![Карта и каталог возможностей](docs/screenshots/opportunities.jpg)
+![Карта и каталог возможностей](docs/screenshots/opportunities.png)
 
 ### Детальная карточка возможности
 
