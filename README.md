@@ -2,6 +2,8 @@
 
 Трамплин — интерактивная карьерная платформа для студентов, выпускников, работодателей, кураторов и администратора.
 
+🏆 Проект занял 2 место на хакатоне IF...ELSE 2026
+
 ![Python](https://img.shields.io/badge/python-3670A0?style=flat&logo=python&logoColor=ffdd54)
 ![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=flat&logo=fastapi)
 ![PostgreSQL](https://img.shields.io/badge/postgres-%23316192.svg?style=flat&logo=postgresql&logoColor=white)
@@ -102,8 +104,8 @@ brew install python@3.11
 ## Клонирование репозитория
 
 ```bash
-git clone https://github.com/NerdySnake6/if-else-hackathon-2026.git
-cd if-else-hackathon-2026
+git clone https://github.com/NerdySnake6/Tramplin-ai-career-platform.git
+cd Tramplin-ai-career-platform
 ```
 
 ## Быстрый запуск через Docker Compose
@@ -285,7 +287,7 @@ npm run dev
 
 ```bash
 cd ~
-git clone https://github.com/NerdySnake6/if-else-hackathon-2026.git tramplin
+git clone https://github.com/NerdySnake6/Tramplin-ai-career-platform.git tramplin
 cd ~/tramplin
 cp docker.env.example .env
 nano .env
