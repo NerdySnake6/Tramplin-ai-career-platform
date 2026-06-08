@@ -24,6 +24,22 @@
 - **Базовая SEO-подготовка:** динамическая генерация `Sitemap.xml` и `Robots.txt`, оптимизация мета-тегов, canonical URL и интеграция с метриками аналитики.
 - **Модерация работодателей:** ограничение на создание карточек (до 5 штук) для новых/неверифицированных аккаунтов. Демо-автоверификация настраивается переменной `TRAMPLIN_AUTO_VERIFY_EMPLOYERS`.
 
+## Внешний вид проекта
+
+Скриншоты сделаны с production-версии [tramplin.site](https://tramplin.site).
+
+### Публичная витрина
+
+![Публичная витрина Трамплин](docs/screenshots/home.jpg)
+
+### Карта и каталог возможностей
+
+![Карта и каталог возможностей](docs/screenshots/opportunities.jpg)
+
+### Детальная карточка возможности
+
+![Детальная карточка возможности](docs/screenshots/opportunity-detail.jpg)
+
 ## Стек
 
 - **Backend**: `FastAPI`, `SQLAlchemy`, `Alembic`, `PostgreSQL`
@@ -64,15 +80,20 @@ flowchart LR
 
 ## Что нужно для запуска
 
+Для запуска через Docker Compose:
+
 - `git`
 - `Docker Engine`
 - `Docker Compose v2` (`docker compose version`)
+
+Для локальной разработки без Docker дополнительно:
+
 - `Python 3.11`
 - `pip`
 - `Node.js 20+`
 - `npm`
 
-Если на macOS не установлен `python3.11`, можно поставить его через Homebrew:
+Если нужен локальный запуск без Docker и на macOS не установлен `python3.11`, можно поставить его через Homebrew:
 
 ```bash
 brew install python@3.11
@@ -83,6 +104,29 @@ brew install python@3.11
 ```bash
 git clone https://github.com/NerdySnake6/if-else-hackathon-2026.git
 cd if-else-hackathon-2026
+```
+
+## Быстрый запуск через Docker Compose
+
+Docker-конфигурация поднимает PostgreSQL, backend и frontend.
+Она рассчитана на production/VPS-среду с доменом `tramplin.site` и сертификатами Let's Encrypt в `/etc/letsencrypt`.
+
+Подготовь `.env` из шаблона:
+
+```bash
+cp docker.env.example .env
+```
+
+Заполни минимальные значения в `.env`, затем запусти весь стек одной командой:
+
+```bash
+docker compose up -d --build
+```
+
+Проверить состояние контейнеров можно отдельно:
+
+```bash
+docker compose ps
 ```
 
 ## Переменные окружения
@@ -247,10 +291,15 @@ cp docker.env.example .env
 nano .env
 ```
 
-Заполни `.env`, затем собери и подними все сервисы:
+Заполни минимальные значения из следующего раздела. После этого собери и подними все сервисы одной командой:
 
 ```bash
 docker compose up -d --build
+```
+
+Проверить состояние контейнеров можно отдельной командой:
+
+```bash
 docker compose ps
 ```
 
@@ -261,7 +310,7 @@ docker compose ps
 - если в базе еще нет администратора и заданы `TRAMPLIN_ADMIN_EMAIL`/`TRAMPLIN_ADMIN_PASSWORD`, backend создаст первого администратора;
 - поднимется `frontend` с nginx, который отдаст сайт и проксирует `/api/*` в backend.
 
-### 2. Переменные окружения для VPS
+### 2. Минимальные переменные окружения для VPS
 
 Создай файл `.env` в корне проекта:
 
@@ -269,44 +318,51 @@ docker compose ps
 cp docker.env.example .env
 ```
 
-Заполни значения:
+`docker.env.example` содержит полный production-шаблон. Для базового запуска и первого входа в админку достаточно заполнить:
 
 ```env
 YANDEX_GEOCODER_API_KEY=твой_ключ_яндекс_карт
 VITE_YANDEX_MAPS_API_KEY=твой_ключ_яндекс_карт
 TRAMPLIN_SECRET_KEY=случайная_длинная_строка
-ACCESS_TOKEN_EXPIRE_MINUTES=43200
+POSTGRES_PASSWORD=надежный_пароль_базы
 TRAMPLIN_ADMIN_EMAIL=admin@example.com
 TRAMPLIN_ADMIN_PASSWORD=надежный_пароль
-TRAMPLIN_ADMIN_NAME=Администратор
 TRAMPLIN_CURATOR_EMAIL=curator@example.com
 TRAMPLIN_CURATOR_PASSWORD=надежный_пароль_куратора
-TRAMPLIN_CURATOR_NAME=Куратор
-TRAMPLIN_AUTO_VERIFY_EMPLOYERS=false
+```
+
+Что означают эти переменные:
+
+- `YANDEX_GEOCODER_API_KEY` — backend-ключ для HTTP-геокодера Яндекса;
+- `VITE_YANDEX_MAPS_API_KEY` — frontend-ключ для карты, обычно тот же ключ Яндекса;
+- `TRAMPLIN_SECRET_KEY` — секрет подписи JWT-токенов, на VPS должен быть длинным и уникальным;
+- `POSTGRES_PASSWORD` — пароль PostgreSQL, его лучше задать до первого запуска, пока volume базы еще не создан;
+- `TRAMPLIN_ADMIN_EMAIL` и `TRAMPLIN_ADMIN_PASSWORD` — данные первого администратора;
+- `TRAMPLIN_CURATOR_EMAIL` и `TRAMPLIN_CURATOR_PASSWORD` — данные первого куратора, если куратор нужен сразу.
+
+Для публичной регистрации и сервисных писем дополнительно заполни SMTP и публичные URL:
+
+```env
 SMTP_HOST=smtp-relay.brevo.com
 SMTP_PORT=587
 SMTP_USERNAME=логин_SMTP_из_Brevo
 SMTP_PASSWORD=ключ_SMTP_из_Brevo
 SMTP_FROM_EMAIL=noreply@tramplin.site
-SMTP_FROM_NAME=Tramplin
 BACKEND_PUBLIC_URL=https://tramplin.site/api
 FRONTEND_PUBLIC_URL=https://tramplin.site
-EMAIL_VERIFICATION_TTL_MINUTES=60
-AI_FEATURES_ENABLED=false
+```
+
+AI-помощника можно оставить выключенным. Если он нужен, включи его и заполни ключ Polza:
+
+```env
+AI_FEATURES_ENABLED=true
 POLZA_API_KEY=ключ_API_из_Polza
-POLZA_API_BASE_URL=https://polza.ai/api/v1
-POLZA_MODEL=openai/gpt-5.4-mini
-AI_REQUEST_TIMEOUT_SECONDS=20
-AI_MAX_OUTPUT_TOKENS=3000
-AI_RATE_LIMIT_WINDOW_SECONDS=60
-AI_RATE_LIMIT_MAX_REQUESTS=10
-FRONTEND_PORT=80
-FRONTEND_HTTPS_PORT=443
 ```
 
 Важно:
 
 - `.env` в корне проекта используется Docker Compose и не должен попадать в git;
+- `POSTGRES_USER`, `POSTGRES_DB`, `ACCESS_TOKEN_EXPIRE_MINUTES`, `TRAMPLIN_ADMIN_NAME`, `TRAMPLIN_CURATOR_NAME`, `TRAMPLIN_AUTO_VERIFY_EMPLOYERS`, `EMAIL_VERIFICATION_TTL_MINUTES`, `FRONTEND_PORT` и `FRONTEND_HTTPS_PORT` можно оставить как в `docker.env.example`;
 - после изменения backend-переменных нужно пересоздать backend-контейнер;
 - после изменения `VITE_YANDEX_MAPS_API_KEY` нужно пересобрать frontend, потому что ключ попадает в production-сборку Vite;
 - `POLZA_API_KEY`, SMTP-пароль, `TRAMPLIN_SECRET_KEY` и пароль PostgreSQL остаются только на backend/VPS;
